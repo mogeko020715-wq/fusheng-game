@@ -521,3 +521,66 @@ h3 {
   from { transform: translateX(0); }
   to   { transform: translateX(var(--walk-w)); }
 }
+
+
+/* ==========================================================
+   移动端适配（≤720px）
+   ========================================================== */
+@media (max-width: 720px) {
+  .screen { padding: 16px 10px; }
+  .start-inner, .end-inner { padding: 26px 18px; }
+  .game-title { font-size: 34px; }
+  .game-title.small { font-size: 25px; }
+  .intro-text { font-size: 14px; }
+  .ink-btn.big { font-size: 18px; padding: 10px 30px; }
+
+  /* 顶栏紧凑 */
+  #topbar { font-size: 13.5px; padding: 8px 10px; }
+  #topbar .who span, #topbar .when span { margin-right: 8px; }
+  .family-badge { font-size: 11.5px; padding: 0 7px; }
+
+  /* 单栏 + 重排：场景 → 身心/岁月 → 资质 */
+  #layout { display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 24px; align-items: stretch; }
+  #panel-center { order: 1; }
+  #panel-right { order: 2; }
+  #panel-left { order: 3; }
+  .sketch-box { padding: 12px 14px; }
+
+  /* 场景舞台 */
+  #scene-stage { height: 148px; }
+  #scene-art svg { height: 100px; }
+  #actor { width: 42px; height: 58px; left: 10%; bottom: 4px; }
+  #scene-title { font-size: 17px; }
+  #scene-desc { font-size: 13px; min-height: 20px; }
+
+  /* 地点导航：均分两行 */
+  #locations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .loc-btn { padding: 7px 4px; font-size: 14px; text-align: center; }
+
+  /* 行动按钮：大触控目标，两列排布 */
+  #actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .act-btn { padding: 12px 8px; font-size: 15px; margin: 0; }
+  .kbd { display: none; }   /* 移动端没有键盘，隐藏键位角标 */
+
+  /* 身心：两列紧凑排布 */
+  .needs-box { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .needs-box h3 { grid-column: 1 / -1; }
+  .need-row { margin: 5px 0; font-size: 13px; }
+
+  /* 岁月日志矮一些 */
+  #log { height: 170px; font-size: 13px; }
+
+  /* 事件弹窗 */
+  .modal { padding: 12px; }
+  .modal-box { padding: 16px 14px; }
+  #event-text, #event-result-text { font-size: 15px; }
+  .choice-btn { padding: 12px 12px; font-size: 15px; }
+
+  /* 结局长卷 */
+  .end-inner { width: 100%; min-width: 0; }
+  #end-scroll { min-width: 0; }
+  .end-stats { gap: 6px; }
+  .scroll-inner { height: 112px; }
+  .end-verdict { font-size: 15.5px; }
+  #end-memories { font-size: 13.5px; }
+}

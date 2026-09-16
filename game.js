@@ -223,6 +223,9 @@ const ALL_TAGS = {
   '身怀绝技': '任一技艺练到 5 级',
   '文武双全': '体质与智力都达到 75',
   '小有积蓄': '成年时攒下 120 元',
+  '知寒知暖': '贫寒之家暗线：焐热过妈妈的手，也读懂了它',
+  '灯火可亲': '小康之家暗线：看懂了饭桌规矩与自行车后座的爱',
+  '锦衣知暖': '富贵之家暗线：等到了那顿推掉应酬的生日饭',
 };
 function computeTags(cause) {
   const tags = [];
@@ -239,6 +242,9 @@ function computeTags(cause) {
   if (Object.values(S.skills).some((s) => s.lvl >= 5)) tags.push('身怀绝技');
   if (S.attrs.体质 >= 75 && S.attrs.智力 >= 75) tags.push('文武双全');
   if (S.money >= 120) tags.push('小有积蓄');
+  if (S.flags.arcDone === 'poor') tags.push('知寒知暖');
+  if (S.flags.arcDone === 'middle') tags.push('灯火可亲');
+  if (S.flags.arcDone === 'rich') tags.push('锦衣知暖');
   return tags;
 }
 
@@ -770,6 +776,146 @@ const EVENTS = [
       { t: '紧张，还是算了', ok: { 心情: -2 }, okTxt: '你在台下看完了整场演出，手心出了一晚上的汗。' },
     ],
   },
+
+  /* ============================================================
+   * 家境专属事件包
+   * 贫寒暗线「妈妈的手」/ 小康暗线「自行车后座」/ 富贵暗线「等一盏灯」
+   * ============================================================ */
+
+  /* ---- 贫寒之家 ---- */
+  {
+    id: 'poor-hands', title: '妈妈的手', min: 5, max: 8, weight: 3,
+    cond: (s) => s.familyKey === 'poor' && !s.flags['seen:poor-hands'],
+    text: '冬天特别冷。夜里你钻进被窝，碰到妈妈的手——粗糙得像老树皮，裂着好几道口子。\n她白天在食堂帮人洗碗，手一直泡在冰水里。',
+    choices: [
+      { t: '把妈妈的手揣进自己怀里焐着', ok: { 心情: 6, flag: { poorArc1: true }, mem: '那个冬天，你用小小的身体焐热了妈妈的手。' }, okTxt: '妈妈愣了一下，然后笑了，眼角有点湿。\n「我们家孩子，长大了。」' },
+      { t: '往里缩了缩，假装睡着了', ok: { 心情: -2 }, okTxt: '被窝里很暖和。可你总觉得，那双手碰到的地方，有点凉。' },
+    ],
+  },
+  {
+    id: 'poor-sewing', title: '深夜的缝纫机', min: 9, max: 12, weight: 3,
+    cond: (s) => s.familyKey === 'poor' && !s.flags['seen:poor-sewing'],
+    text: '半夜醒来，你听见隔壁传来咔嗒、咔嗒的声音。\n门缝里透出灯光——妈妈在踩缝纫机，接了好多改裤脚的活儿，一条五毛钱。',
+    choices: [
+      { t: '第二天早起，帮她穿针引线', ok: { 智力: 1, 心情: 5, flag: { poorArc2: true }, mem: '你学会了穿针。妈妈踩机器，你递线，谁也没说话，灯一直很亮。' }, okTxt: '妈妈嘴上嫌你笨手笨脚，却把你的手攥在手心里，暖了很久。' },
+      { t: '翻个身，装睡', ok: { 心情: -2 }, okTxt: '咔嗒、咔嗒。这声音陪你睡着了，像一首听不懂的歌。' },
+    ],
+  },
+  {
+    id: 'poor-finale-a', title: '家长会那天', min: 13, max: 16, weight: 5,
+    cond: (s) => s.familyKey === 'poor' && s.flags.poorArc1 && s.flags.poorArc2 && !s.flags.poorFinale,
+    text: '开家长会了。你在教室窗口张望，心里打鼓：妈妈会来吗？她会穿那件洗得发白的工装吗？\n然后你看见了她——穿着过年才舍得穿的呢子外套，头发梳得整整齐齐，站在校门口，有点局促地找人打听初三（2）班怎么走。',
+    choices: [
+      { t: '跑过去，大声喊「妈！」', ok: { 心情: 14, 魅力: 2, flag: { poorFinale: true, arcDone: 'poor' }, mem: '家长会那天，妈妈穿上了她最好的衣服。你牵着她穿过整个校园，一点都不觉得丢人。' }, okTxt: '你牵着她的手穿过校园。那双手还是粗糙的，可你握得很紧、很紧。\n这一天你忽然明白：贫寒从来不是丢人的事，把手松开才是。' },
+    ],
+  },
+  {
+    id: 'poor-finale-b', title: '家长会那天', min: 14, max: 17, weight: 2,
+    cond: (s) => s.familyKey === 'poor' && !(s.flags.poorArc1 && s.flags.poorArc2) && !s.flags.poorFinale,
+    text: '开家长会了。同学们的家长陆续到了，你的座位旁边一直空着。\n快散会时，班主任走过来说：你妈妈来过电话，厂里加班，走不开，让你好好听老师讲。',
+    choices: [
+      { t: '点点头，把椅子收好', ok: { 心情: -3, 智力: 1, flag: { poorFinale: true }, mem: '家长会妈妈没来，她在加班。你把旁边的空椅子收得整整齐齐。' }, okTxt: '回家的路上你给自己买了个烤红薯。\n你想，等以后挣钱了，要让妈妈少加几年班。' },
+    ],
+  },
+  {
+    id: 'poor-bottles', title: '捡瓶子换糖', min: 6, max: 10, weight: 2,
+    cond: (s) => s.familyKey === 'poor',
+    text: '放学路上，你看见奶奶在翻垃圾桶捡饮料瓶。她说，攒一袋子能卖两块多。\n有同学正好经过，朝这边看了一眼。',
+    choices: [
+      { t: '大大方方帮奶奶一起捡', ok: { money: 2, 体质: 1, 心情: 5, mem: '你和奶奶捡了一下午瓶子，换了两块四，一人一根冰棍。' }, okTxt: '你接过奶奶手里的蛇皮袋：「我来拿，这个沉。」\n两块四毛钱，两根冰棍，甜了一路。' },
+      { t: '装作不认识，快步走过', ok: { 心情: -5 }, okTxt: '你走得飞快。那天晚上，奶奶给你留了半块西瓜，你吃得不是滋味。' },
+    ],
+  },
+
+  /* ---- 小康之家 ---- */
+  {
+    id: 'mid-table', title: '饭桌上的规矩', min: 6, max: 9, weight: 3,
+    cond: (s) => s.familyKey === 'middle' && !s.flags['seen:mid-table'],
+    text: '你家饭桌有条规矩：食不言。爸爸觉得吃饭就该安安静静。\n可你今天在学校得了一朵小红花，憋了一路，就想在饭桌上宣布。',
+    choices: [
+      { t: '扒完饭，放下筷子再说', ok: { 心情: 5, flag: { midArc1: true }, mem: '你得的小红花，是规规矩矩吃完饭才宣布的。爸爸听完，嘴角动了一下。' }, okTxt: '爸爸听完，「嗯」了一声，给你夹了一筷子肉。\n你后来才懂，那一筷子肉就是他全部的夸奖。' },
+      { t: '忍不住，含着饭就喊出来', ok: { 心情: 6, 魅力: 0.5 }, okTxt: '「食不言！」爸爸板起脸。但那天晚上，小红花被贴在了冰箱最中间。' },
+    ],
+  },
+  {
+    id: 'mid-bike', title: '自行车后座', min: 10, max: 13, weight: 3,
+    cond: (s) => s.familyKey === 'middle' && !s.flags['seen:mid-bike'],
+    text: '你半夜发烧，外面下着雨。爸爸二话不说，给你裹上雨衣，把你架上他那辆老凤凰的后座，往医院蹬。\n雨点砸在他的背上，你趴在里面，一点都没淋着。',
+    choices: [
+      { t: '搂紧爸爸的腰', ok: { 心情: 8, flag: { midArc2: true }, mem: '雨夜里，爸爸的自行车后座是世界上最安全的地方。' }, okTxt: '他的背很宽，把风挡得严严实实。\n你迷迷糊糊地想：原来「父爱如山」是这个意思，山不说话，只是挡雨。' },
+      { t: '迷迷糊糊地睡过去', ok: { 健康: 4 }, okTxt: '到医院时你睡得很沉。爸爸的后背湿透了，你身上是干的。' },
+    ],
+  },
+  {
+    id: 'mid-finale-a', title: '爸爸的白头发', min: 14, max: 17, weight: 5,
+    cond: (s) => s.familyKey === 'middle' && s.flags.midArc1 && s.flags.midArc2 && !s.flags.midFinale,
+    text: '周末大扫除，你踩着凳子擦吊柜，一低头，看见爸爸蹲在地上修那辆老凤凰。\n他的头顶，白头发已经连成了一小片。你突然意识到，那个能把你举过头顶的人，开始老了。',
+    choices: [
+      { t: '跳下凳子，蹲过去帮他递扳手', ok: { 心情: 12, 魅力: 1.5, flag: { midFinale: true, arcDone: 'middle' }, mem: '你发现爸爸有了白头发。那天你们爷俩一起修好了那辆老自行车。' }, okTxt: '你们蹲在地上修了一下午车。爸爸话还是不多，但每颗螺丝都让你亲手拧。\n「学会了，以后你自己的车链子掉了，不求人。」——这就是他表达爱的方式。' },
+    ],
+  },
+  {
+    id: 'mid-finale-b', title: '爸爸的白头发', min: 15, max: 17, weight: 2,
+    cond: (s) => s.familyKey === 'middle' && !(s.flags.midArc1 && s.flags.midArc2) && !s.flags.midFinale,
+    text: '周末大扫除，你一低头，看见爸爸蹲在地上修自行车，头顶的白头发连成了一小片。\n你们平日里话不多，这一刻，你也不知道该说点什么。',
+    choices: [
+      { t: '默默给他倒了杯热水', ok: { 心情: 4, flag: { midFinale: true }, mem: '你发现爸爸有了白头发。你没说什么，给他倒了杯热水。' }, okTxt: '爸爸接过水杯，愣了一下，说「谢谢」。\n父子之间，一杯水也算一次拥抱。' },
+    ],
+  },
+  {
+    id: 'mid-cram', title: '补习班风波', min: 8, max: 14, weight: 2,
+    cond: (s) => s.familyKey === 'middle',
+    text: '妈妈宣布：给你报了周末数学补习班，「别人家孩子都在补，咱不能掉队。」\n你的周末，眼看要没了。',
+    choices: [
+      { t: '去就去，学点真本事（智力检定）', check: { attr: '智力', dc: 55 }, ok: { 智力: 2.5, 娱乐: -8 }, okTxt: '补习班很苦，但你解出难题的那一刻，是真的爽。', fail: { 智力: 0.8, 心情: -5 }, failTxt: '你坐在教室最后一排，听得云里雾里，只想窗外的麻雀。' },
+      { t: '跟妈妈讨价还价：补一科换半天玩', ok: { 智力: 1, 娱乐: 6, 魅力: 0.5 }, okTxt: '妈妈想了想，居然同意了。你第一次体会到「谈判」的甜头。' },
+    ],
+  },
+
+  /* ---- 富贵之家 ---- */
+  {
+    id: 'rich-nanny', title: '王姨的口袋', min: 4, max: 7, weight: 3,
+    cond: (s) => s.familyKey === 'rich' && !s.flags['seen:rich-nanny'],
+    text: '爸爸妈妈又出差了。家里很大，大得说话有回音。\n保姆王姨在厨房给你煮小馄饨，她的围裙口袋里，总装着给你留的奶糖。',
+    choices: [
+      { t: '搬小板凳坐在厨房陪她', ok: { 心情: 7, flag: { richArc1: true }, mem: '大房子里的童年，是王姨围裙口袋里的奶糖味。' }, okTxt: '王姨一边搅馄饨一边给你唱她老家的童谣。\n很多年后你才反应过来：你关于「家」的最早记忆，主角是王姨。' },
+      { t: '抱着玩具熊回自己房间', ok: { 心情: -3 }, okTxt: '你的房间很大，玩具很多。可玩具不会给你煮馄饨。' },
+    ],
+  },
+  {
+    id: 'rich-meeting', title: '缺席的家长会', min: 8, max: 12, weight: 3,
+    cond: (s) => s.familyKey === 'rich' && !s.flags['seen:rich-meeting'],
+    text: '家长会。别人的座位上坐着爸爸或妈妈，你的座位上坐着司机叔叔，他甚至不太敢和老师说话。\n同桌小声问：「你爸妈呢？」',
+    choices: [
+      { t: '「他们忙。我自己也行。」', ok: { 智力: 1, 心情: 2, flag: { richArc2: true }, mem: '家长会爸妈没来。你把老师说的每句话都记了下来，回家贴在冰箱上。' }, okTxt: '你把老师的话一条条记在本子上，回家贴在冰箱门上。\n第二天冰箱上多了一张便签，是妈妈的笔迹：「宝贝真棒。——妈妈」' },
+      { t: '赌气说「我没有爸妈」', ok: { 心情: -4 }, okTxt: '同桌被你噎得不敢说话了。可说完这句，你自己的鼻子先酸了。' },
+    ],
+  },
+  {
+    id: 'rich-finale-a', title: '生日那天', min: 13, max: 17, weight: 5,
+    cond: (s) => s.familyKey === 'rich' && s.flags.richArc1 && s.flags.richArc2 && !s.flags.richFinale,
+    text: '你生日。你以为今年又是司机接送、蛋糕由秘书代订。\n可傍晚，门响了——爸爸拎着菜，妈妈系着围裙，他们推掉了所有应酬。\n妈妈的手艺很生疏，糖醋排骨有点糊。但灯全亮着，人在，家就在。',
+    choices: [
+      { t: '把糊掉的排骨也吃得干干净净', ok: { 心情: 14, 魅力: 2, flag: { richFinale: true, arcDone: 'rich' }, mem: '那年生日，爸妈推掉应酬回家做饭。排骨糊了，灯全亮着。' }, okTxt: '你吃完了最后一块糊排骨，说：「这是我吃过最好吃的生日饭。」\n妈妈转过身去擦眼睛。爸爸给你盛了第二碗饭。' },
+    ],
+  },
+  {
+    id: 'rich-finale-b', title: '生日那天', min: 15, max: 17, weight: 2,
+    cond: (s) => s.familyKey === 'rich' && !(s.flags.richArc1 && s.flags.richArc2) && !s.flags.richFinale,
+    text: '你生日。蛋糕是秘书订的，很精致，卡片上印着烫金的「生日快乐」，没有署名。\n手机震了一下：爸爸转来一笔钱，「喜欢什么自己买」。',
+    choices: [
+      { t: '给自己点一碗长寿面', ok: { 心情: -2, 智力: 1, flag: { richFinale: true }, mem: '那个生日，蛋糕很贵，祝福是打印的。你给自己点了碗长寿面。' }, okTxt: '面很便宜，热气腾腾。\n你一边吃一边想：以后我有了家，生日一定要自己下厨。' },
+    ],
+  },
+  {
+    id: 'rich-treat', title: '请客风波', min: 7, max: 12, weight: 2,
+    cond: (s) => s.familyKey === 'rich',
+    text: '你零花钱多，总请同学吃零食，身边围着的人越来越多。\n今天你忘了带钱，围着你的人一下子散了大半。只有同桌小胖，把自己的辣条分了你一半。',
+    choices: [
+      { t: '记住小胖，看清了这场热闹', ok: { 智力: 1.5, 魅力: 1, mem: '你请客时高朋满座，忘带钱时只剩小胖。你把这根辣条记了很多年。' }, okTxt: '你嚼着那半根辣条，忽然明白了什么叫朋友。\n从此你的零食，只分给特定的人。' },
+      { t: '明天带双倍的钱，把排场找回来', ok: { money: -10, 心情: 3 }, okTxt: '第二天你又成了人群的中心。可你总觉得，这些笑脸有点吵。' },
+    ],
+  },
 ];
 
 /* ---------------- 里程碑事件 ---------------- */
@@ -856,11 +1002,48 @@ const MILESTONES = {
   },
 };
 
+/* ---------------- 家境暗线保底调度：到年龄未触发则补弹 ---------------- */
+const FAMILY_ARC = {
+  poor: [
+    { age: 6, id: 'poor-hands' },
+    { age: 10, id: 'poor-sewing' },
+    { age: 14, a: 'poor-finale-a', b: 'poor-finale-b', okFlags: ['poorArc1', 'poorArc2'] },
+  ],
+  middle: [
+    { age: 7, id: 'mid-table' },
+    { age: 11, id: 'mid-bike' },
+    { age: 15, a: 'mid-finale-a', b: 'mid-finale-b', okFlags: ['midArc1', 'midArc2'] },
+  ],
+  rich: [
+    { age: 5, id: 'rich-nanny' },
+    { age: 9, id: 'rich-meeting' },
+    { age: 14, a: 'rich-finale-a', b: 'rich-finale-b', okFlags: ['richArc1', 'richArc2'] },
+  ],
+};
+
+function checkFamilyArc() {
+  const steps = FAMILY_ARC[S.familyKey];
+  if (!steps) return;
+  steps.forEach((st) => {
+    if (S.age < st.age) return;
+    if (st.a) {
+      if (S.flags['seen:' + st.a] || S.flags['seen:' + st.b]) return;
+      const ok = st.okFlags.every((f) => S.flags[f]);
+      const ev = EVENTS.find((e) => e.id === (ok ? st.a : st.b));
+      if (ev) milestoneQueue.push(ev);
+    } else if (!S.flags['seen:' + st.id]) {
+      const ev = EVENTS.find((e) => e.id === st.id);
+      if (ev) milestoneQueue.push(ev);
+    }
+  });
+}
+
 let milestoneQueue = [];
 
 function checkMilestones() {
   const m = MILESTONES[S.age];
   if (m) milestoneQueue.push(m);
+  checkFamilyArc();
 }
 
 function runMilestones() {
@@ -893,6 +1076,7 @@ function drawEvent() {
 
 function openEvent(ev, isMilestone = false) {
   eventLock = true;
+  if (ev && ev.id) S.flags['seen:' + ev.id] = true;
   if (isMilestone) Sound.play('chime');
   $('modal-event').classList.remove('hidden');
   $('event-title').textContent = ev.title;

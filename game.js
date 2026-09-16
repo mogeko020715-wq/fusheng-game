@@ -179,11 +179,68 @@ const FAMILY_KEYS = ['poor', 'poor', 'middle', 'middle', 'middle', 'rich']; // �
 
 const SURNAMES = ['王', '李', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '林', '何', '郭'];
 const NAMES_M = ['志强', '建国', '小明', '子轩', '浩然', '铁蛋', '阿福', '一鸣', '念安', '知远', '石头', '晨光'];
-const NAMES_F = ['秀英', '桂芳', '小雨', '诗涵', '欣怡', '望舒', '春花', '静姝', '晚晴', '念慈', '燕子', '繁星'];
+const NAMES_F = ['秀英', '桂芳', '小雨', '诗涵', '欣怡', '招娣', '春花', '静姝', '晚晴', '念慈', '燕子', '繁星'];
 
 const APT_LABEL = (v) => v < 0.85 ? '鲁钝' : v < 1.0 ? '平平' : v < 1.15 ? '出众' : '天资';
 const APT_ORDER = ['学习', '运动', '艺术'];
 const APT_TIP = { 学习: '影响看书与上课的智力收益', 运动: '影响锻炼与运动的体质收益', 艺术: '影响艺术练习的魅力收益' };
+
+/* ---------------- 心愿 ---------------- */
+const DREAMS = {
+  science: { name: '科学家', attr: '智力' },
+  sports:  { name: '运动员', attr: '体质' },
+  art:     { name: '艺术家', attr: '魅力' },
+  food:    { name: '美食家', skill: '烹饪' },
+  money:   { name: '有钱人' },
+};
+const DREAM_OKTXT = '说出来的那一刻，连你自己都吓了一跳。原来，这就是愿望。\n从那以后，朝着这个方向的每一分努力，都格外有劲。（对应成长 +10%）';
+
+function dreamFulfilled() {
+  const d = S.flags.dream;
+  if (!d) return false;
+  const skillLvl = (n) => (S.skills[n] || { lvl: 0 }).lvl;
+  switch (d) {
+    case 'science': return S.attrs.智力 >= 75 || S.exam === '重点高中';
+    case 'sports':  return S.attrs.体质 >= 75;
+    case 'art':     return S.attrs.魅力 >= 70 || (S.flags.art && skillLvl(S.flags.art) >= 4);
+    case 'food':    return skillLvl('烹饪') >= 4;
+    case 'money':   return S.money >= 120;
+  }
+  return false;
+}
+
+/* ---------------- 人生图鉴 ---------------- */
+const ALL_TAGS = {
+  '天不假年': '在成年之前谢幕',
+  '金榜题名': '中考考上重点高中',
+  '按部就班': '考上普通高中，平稳落地',
+  '另辟蹊径': '走进职业高中，换一条赛道',
+  '心想事成': '实现八岁那年许下的心愿',
+  '寒门贵子': '贫寒之家走出重点高中生',
+  '无忧无虑': '富贵之家，幸福均值 65 以上',
+  '快乐童年': '幸福均值 70 以上的一生',
+  '心事重重': '幸福均值不足 45 的一生',
+  '身怀绝技': '任一技艺练到 5 级',
+  '文武双全': '体质与智力都达到 75',
+  '小有积蓄': '成年时攒下 120 元',
+};
+function computeTags(cause) {
+  const tags = [];
+  const happy = Math.round(S.happinessSum / S.happinessCnt);
+  if (cause === '夭') tags.push('天不假年');
+  if (S.exam === '重点高中') tags.push('金榜题名');
+  if (S.exam === '普通高中') tags.push('按部就班');
+  if (S.exam === '职业高中') tags.push('另辟蹊径');
+  if (dreamFulfilled()) tags.push('心想事成');
+  if (S.familyKey === 'poor' && S.exam === '重点高中') tags.push('寒门贵子');
+  if (S.familyKey === 'rich' && happy >= 65) tags.push('无忧无虑');
+  if (happy >= 70) tags.push('快乐童年');
+  if (happy < 45) tags.push('心事重重');
+  if (Object.values(S.skills).some((s) => s.lvl >= 5)) tags.push('身怀绝技');
+  if (S.attrs.体质 >= 75 && S.attrs.智力 >= 75) tags.push('文武双全');
+  if (S.money >= 120) tags.push('小有积蓄');
+  return tags;
+}
 
 /* ---------------- 状态 ---------------- */
 let S = null;          // 当前人生
@@ -204,7 +261,7 @@ function newLife() {
     money: rand(0, 5),
     skills: {},            // { 烹饪: {xp, lvl} }
     buffs: [],             // { name, desc, slots, gainMul, energyMul }
-    flags: { wentSchool: false, skipped: 0, intro: false },
+    flags: { wentSchool: false, skipped: 0, intro: false, dream: null },
     location: 'home',
     memories: [],          // 大事记
     eventCooldown: 0,
@@ -231,8 +288,11 @@ function remember(text) {
 /* ---------------- 属性/需求操作 ---------------- */
 function gain(attr, v) {
   const mul = S.buffs.reduce((m, b) => m * (b.gainMul || 1), 1);
+  // 心愿加成：朝着梦想方向的努力 +10%
+  const da = S.flags.dream && DREAMS[S.flags.dream] && DREAMS[S.flags.dream].attr;
+  const dreamMul = (da === attr && v > 0) ? 1.1 : 1;
   const before = S.attrs[attr];
-  S.attrs[attr] = clamp(round1(S.attrs[attr] + v * mul), 1, 100);
+  S.attrs[attr] = clamp(round1(S.attrs[attr] + v * mul * dreamMul), 1, 100);
   fx(attr, S.attrs[attr] - before);
 }
 function gainNeed(k, v) {
@@ -315,6 +375,8 @@ function nextDay() {
 function afterAction() {
   if (!S.alive) return;
   render();
+  // 生日里程碑优先弹出
+  if (milestoneQueue.length) { runMilestones(); return; }
   // 随机事件
   if (S.eventCooldown > 0) S.eventCooldown--;
   else if (S.age < END_AGE && chance(0.11)) {
@@ -488,6 +550,7 @@ const EVENTS = [
     id: 'bully', title: '高年级的「规矩」', min: 7, max: 14,
     text: '巷口被几个高年级学生堵住了。「新来的？懂不懂规矩，交保护费。」',
     choices: [
+      { t: '练家子，直接放倒（武术傍身）', cond: (s) => (s.skills.武术 || { lvl: 0 }).lvl >= 3, ok: { 体质: 2, 魅力: 2, 心情: 10, mem: '练过的身手派上了用场。从那以后，巷口没人再拦你。' }, okTxt: '三下五除二，对面落荒而逃。你拍拍手，像做了件小事。' },
       { t: '硬碰硬（体质检定）', check: { attr: '体质', dc: 65 }, ok: { 体质: 2, 魅力: 2, 心情: 8, mem: '你把堵巷口的高年级学生打服了，一战成名。' }, fail: { 健康: -10, 心情: -10 }, failTxt: '你被推搡在地，膝盖磕破了。他们拿走你的钱，扬长而去。' },
       { t: '不卑不亢讲道理（智力检定）', check: { attr: '智力', dc: 62 }, ok: { 智力: 1.5, 魅力: 1.5, mem: '你三言两语说退了拦路的高年级学生，他们愣是没敢再拦你。' }, fail: { money: -5, 心情: -6 }, failTxt: '对方冷笑一声，搜走了你的零花钱。' },
       { t: '认栽给钱', cond: (s) => s.money >= 5, ok: { money: -5, 心情: -8 }, okTxt: '钱没了，你绕了很远的路回家。' },
@@ -560,6 +623,7 @@ const EVENTS = [
     cond: (s) => s.flags.wentSchool,
     text: '学校运动会。八百米报名的名单上还缺一个名字，体育委员的目光扫过全班，停在你身上。',
     choices: [
+      { t: '报名！武术功底，稳赢', cond: (s) => (s.skills.武术 || { lvl: 0 }).lvl >= 3, ok: { 体质: 2.5, 魅力: 2.5, 心情: 12, mem: '运动会上你一路领先冲过终点，武术班的底子让全场看呆了。' }, okTxt: '你赢得轻轻松松，冲线时还有空朝看台挥了挥手。' },
       { t: '报名！（体质检定）', check: { attr: '体质', dc: 60 }, ok: { 体质: 2.5, 魅力: 2, 心情: 10, mem: '你在运动会上拿了名次，全班为你欢呼。' }, fail: { 健康: -6, 心情: -3 }, failTxt: '你跑岔了气，倒数第二。不过你跑完了全程。' },
       { t: '摇头装没看见', ok: { 心情: -2 } },
     ],
@@ -678,6 +742,34 @@ const EVENTS = [
       { t: '能躲则躲', ok: { 心情: -2 } },
     ],
   },
+  /* ---- 技艺开花：练出来的本事，会自己长出故事 ---- */
+  {
+    id: 'olympiad', title: '奥赛选拔', min: 11, max: 16,
+    cond: (s) => s.flags.wentSchool && (s.skills.编程 || { lvl: 0 }).lvl >= 3,
+    text: '信息课老师把你叫到办公室，推过来一张报名表：「市里奥赛选拔，我推荐了你。去试试？」',
+    choices: [
+      { t: '去！（智力检定）', check: { attr: '智力', dc: 62 }, ok: { 智力: 3, 心情: 10, skill: { name: '编程', xp: 5 }, mem: '你在奥赛选拔里拿了名次，升旗仪式上校长点了你的名。' }, fail: { 心情: -4, 智力: 0.5 }, failTxt: '题目难得离谱，出考场时你腿都是软的。但至少，你去过了。' },
+      { t: '算了，怕耽误功课', ok: { 心情: -2 }, okTxt: '你摇摇头。老师有点惋惜：「可惜了。」' },
+    ],
+  },
+  {
+    id: 'newyear-dinner', title: '年夜饭', min: 9, max: 17, weight: 0.6,
+    cond: (s) => s.location === 'home' && (s.skills.烹饪 || { lvl: 0 }).lvl >= 3,
+    text: '除夕临近，厨房里的年味一天比一天浓。妈妈擦着手回头看你：「今年年夜饭，要不要你来露一手？」',
+    choices: [
+      { t: '系上围裙，掌勺！', ok: { 心情: 14, 魅力: 1.5, skill: { name: '烹饪', xp: 4 }, mem: '那年的年夜饭是你做的。全家人吃得很慢，很认真，爸爸破例多喝了两杯。' } },
+      { t: '打打下手就好', ok: { 心情: 6, 饱食: 6 }, okTxt: '你剥了一晚上的蒜，也偷吃了一晚上的菜。' },
+    ],
+  },
+  {
+    id: 'talent-show', title: '校园文艺汇演', min: 8, max: 16,
+    cond: (s) => s.flags.wentSchool && s.flags.art && (s.skills[s.flags.art] || { lvl: 0 }).lvl >= 3,
+    text: (s) => `学校要办文艺汇演，文艺委员第一个想到你：「你的${s.flags.art}练了这么久，上台露一手吧！」`,
+    choices: [
+      { t: '登台表演', ok: { 魅力: 3, 心情: 10, mem: '文艺汇演的舞台上，灯光打在你脸上。掌声响起来的时候，你有点晕。' } },
+      { t: '紧张，还是算了', ok: { 心情: -2 }, okTxt: '你在台下看完了整场演出，手心出了一晚上的汗。' },
+    ],
+  },
 ];
 
 /* ---------------- 里程碑事件 ---------------- */
@@ -704,6 +796,17 @@ const MILESTONES = {
     choices: [
       { t: '暗暗下决心要当学霸', ok: { 智力: 2, flag: { ambition: true }, mem: '上小学第一天，你暗下决心要当学霸。' } },
       { t: '先交几个朋友要紧', ok: { 魅力: 2, mem: '上小学第一天，你先认识了一群死党。' } },
+    ],
+  },
+  8: {
+    id: 'm8', title: '长大以后……',
+    text: '语文课上，老师让大家轮流说：长大以后想做什么。\n有人说要当医生，有人说要开飞机。教室里热闹极了。\n轮到你了——',
+    choices: [
+      { t: '「我要当科学家！」', ok: { flag: { dream: 'science' }, 智力: 1, mem: '八岁那年，你说你想当科学家。' }, okTxt: DREAM_OKTXT },
+      { t: '「我要当运动员！」', ok: { flag: { dream: 'sports' }, 体质: 1, mem: '八岁那年，你说你想当运动员。' }, okTxt: DREAM_OKTXT },
+      { t: '「我要当艺术家！」', ok: { flag: { dream: 'art' }, 魅力: 1, mem: '八岁那年，你说你想当艺术家。' }, okTxt: DREAM_OKTXT },
+      { t: '「我要吃遍天下美食！」', ok: { flag: { dream: 'food' }, 心情: 4, mem: '八岁那年，你立志要吃遍天下美食。' }, okTxt: DREAM_OKTXT },
+      { t: '「我要当有钱人！」', ok: { flag: { dream: 'money' }, 心情: 2, mem: '八岁那年，你大声宣布以后要当有钱人。' }, okTxt: DREAM_OKTXT },
     ],
   },
   10: {
@@ -738,7 +841,7 @@ const MILESTONES = {
     id: 'm15', title: '中考',
     text: '中考三天，考场上安静得能听见笔尖的沙沙声。你写完了最后一门，交卷铃响起的那一刻，心里空落落的。\n成绩揭晓：你考上了『重点高中』',
     dynamic: (s) => {
-      const score = s.attrs.智力 * 0.8 + s.attrs.体质 * 0.1 + s.needs.心情 * 0.2 + rand(0, 25);
+      const score = s.attrs.智力 * 0.8 + s.attrs.体质 * 0.1 + s.needs.心情 * 0.2 + rand(0, 25) + (((s.skills.编程 || { lvl: 0 }).lvl >= 4) ? 6 : 0);
       if (score >= 78) { s.exam = '重点高中'; return { title: '中考 · 金榜题名', okTxt: '重点高中！你盯着录取通知看了很久，手都有点抖。' }; }
       if (score >= 58) { s.exam = '普通高中'; return { title: '中考 · 尘埃落定', okTxt: '普通高中。不算惊艳，但也是个新起点。' }; }
       s.exam = '职业高中'; return { title: '中考 · 另一条路', okTxt: '职业高中。爸妈安慰你说，三百六十行，行行出状元。' };
@@ -966,6 +1069,13 @@ const ACTIONS = [
   { id: 'walk', loc: 'park', label: '散步', cond: () => true, run: () => { gainNeed('心情', 7); gain('体质', 0.3); addLog('你在林荫道上慢慢走，影子被太阳拉得老长。'); } },
   { id: 'slide', loc: 'park', label: '滑梯秋千', cond: () => S.age <= 9, run: () => { gainNeed('娱乐', 24); gainNeed('心情', 6); addLog('滑梯、秋千、跷跷板，你玩了个遍。'); } },
   { id: 'fish', loc: 'park', label: '湖边垂钓', cond: () => S.age >= 5, run: () => {
+      const lvl = (S.skills.钓鱼 || { lvl: 1 }).lvl;
+      if (lvl >= 5 && chance(0.07)) {
+        gainMoney(5);
+        addLog('你钓上来一个锈铁盒，里面躺着几枚旧硬币。', 'event');
+        remember('你钓上来一只锈铁盒，像钓上来一段别人的故事。');
+        return;
+      }
       gainNeed('娱乐', 14); gainSkill('钓鱼', 2);
       const roll = Math.random();
       if (roll < 0.3) addLog('钓上一团水草。你把它甩回了湖里。');
@@ -1072,6 +1182,10 @@ function render() {
       if (S.needs[k] < 25) row.classList.add('low'); else row.classList.remove('low');
     }
   });
+  // 心愿
+  $('ui-dream').innerHTML = S.flags.dream
+    ? `<span class="tag dream-tag" title="心愿：${DREAMS[S.flags.dream].name}">心愿 · ${DREAMS[S.flags.dream].name}</span>`
+    : '<span class="dim">八岁那年，会有答案</span>';
   // 小人精神状态
   const actor = $('actor');
   const weak = S.needs.精力 < 25 || S.needs.健康 < 30;
@@ -1147,6 +1261,12 @@ function buildVerdict(cause) {
   const weak = { 体质: '体质是短板，你常羡慕跑得快的同学。', 智力: '念书于你有些吃力，但你从没放弃。', 魅力: '你沉默寡言，像墙角一株安静的植物。' }[sorted[2][0]];
   lines.push(praise + weak);
   if (S.exam) lines.push(`中考那年，你考上了${S.exam}。`);
+  if (S.flags.dream) {
+    const dn = DREAMS[S.flags.dream].name;
+    lines.push(dreamFulfilled()
+      ? `你八岁那年的愿望是「${dn}」。回头看，你已经把它攥在了手里。`
+      : `你八岁那年的愿望是「${dn}」。这个愿望，就先轻轻放下吧。`);
+  }
   const sks = Object.entries(S.skills);
   if (sks.length) lines.push(`这些年你学会了：${sks.map(([n, v]) => `${n}（${v.lvl}级）`).join('、')}。`);
   const happy = Math.round(S.happinessSum / S.happinessCnt);
@@ -1172,9 +1292,12 @@ function endLife(cause) {
   eventLock = false;
   Sound.play('bell');
   const verdict = buildVerdict(cause);
+  const tags = computeTags(cause);
   saveMemorial({
     name: S.name, gender: S.gender, family: S.family.name,
     age: S.age, days: S.day, verdict: shortVerdict(), cause,
+    dream: S.flags.dream ? DREAMS[S.flags.dream].name : null,
+    tags,
     when: new Date().toLocaleDateString('zh-CN'),
   });
   $('screen-game').classList.add('hidden');
@@ -1186,7 +1309,8 @@ function endLife(cause) {
     .map((k) => `<span class="tag">${k} ${Math.round(S.attrs[k])}</span>`).join('') +
     `<span class="tag">幸福 ${Math.round(S.happinessSum / S.happinessCnt)}</span>` +
     `<span class="tag">在世 ${S.day} 天</span>` +
-    (S.exam ? `<span class="tag">${S.exam}</span>` : '');
+    (S.exam ? `<span class="tag">${S.exam}</span>` : '') +
+    tags.map((t) => `<span class="tag life-tag" title="${ALL_TAGS[t] || ''}">${t}</span>`).join('');
   renderLifeScroll(cause);
   const mems = S.memories.slice(-6);
   $('end-memories').innerHTML = '<h3>忘不了的事</h3>' + (mems.length
@@ -1211,10 +1335,22 @@ function startLife() {
 
 function renderMemorials() {
   const list = loadMemorials();
-  $('memorial-list').innerHTML = list.length
+  const collected = new Set();
+  list.forEach((m) => (m.tags || []).forEach((t) => collected.add(t)));
+  const all = Object.keys(ALL_TAGS);
+  let html = `<div class="codex"><h3>人生图鉴 · 已收集 ${collected.size}/${all.length}</h3><div class="codex-tags">` +
+    all.map((t) => collected.has(t)
+      ? `<span class="tag" title="${ALL_TAGS[t]}">${t}</span>`
+      : `<span class="tag dim-tag" title="${ALL_TAGS[t]}">？？？</span>`).join('') +
+    `</div></div>`;
+  html += list.length
     ? list.map((m) => `<div class="mem-item"><span class="mem-name">${m.name}</span>（${m.gender} · ${m.family}）<br>
-        ${m.cause === '夭' ? `${m.age} 岁早夭` : `平安长到 ${m.age} 岁`} · ${m.verdict} <span class="dim">${m.when}</span></div>`).join('')
+        ${m.cause === '夭' ? `${m.age} 岁早夭` : `平安长到 ${m.age} 岁`} · ${m.verdict} <span class="dim">${m.when}</span>` +
+        (m.dream ? `<br><span class="dim">心愿：${m.dream}</span>` : '') +
+        ((m.tags && m.tags.length) ? `<div class="mem-tags">${m.tags.map((t) => `<span class="tag" title="${ALL_TAGS[t] || ''}">${t}</span>`).join('')}</div>` : '') +
+        `</div>`).join('')
     : '<div class="empty">往生录还是空白。<br>去活一世吧。</div>';
+  $('memorial-list').innerHTML = html;
 }
 
 /* ---------------- 键盘操作 ---------------- */

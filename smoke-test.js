@@ -7,6 +7,8 @@ function el() {
     children: [],
     classList: { add() {}, remove() {}, contains() { return false; } },
     appendChild(c) { this.children.push(c); },
+    set innerHTML(v) { if (v === '') this.children = []; this._html = v; },
+    get innerHTML() { return this._html || ''; },
     set onclick(fn) { this._onclick = fn; },
     get onclick() { return this._onclick; },
   };

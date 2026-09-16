@@ -78,9 +78,11 @@ const Sound = {
 /* ---------------- 数值飘字 ---------------- */
 let fxQueue = [];
 let fxQuiet = false;           // 需求自然衰减期间不飘字
+let barFlash = {};             // 条闪烁方向记录（仅玩家行动触发，衰减不闪）
 function fx(key, v) {
   if (fxQuiet || !v || Math.abs(v) < 0.05) return;
   fxQueue.push({ key, v });
+  barFlash[fxAnchorId(key)] = v > 0 ? 'up' : 'down';
 }
 function fxAnchorId(k) {
   if (k === 'money') return 'ui-money';
@@ -107,6 +109,29 @@ function flushFx() {
     layer.appendChild(el);
     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1250);
   });
+}
+
+/* ---------------- 幽灵条：悬停行动按钮预览身心变化（无数字，只看影子） ---------------- */
+function showHint(hint) {
+  clearHints();
+  if (!S || !hint) return;
+  Object.entries(hint).forEach(([k, dv]) => {
+    if (!dv) return;
+    const fill = $('need-' + k);
+    if (!fill || !fill.parentNode || !fill.parentNode.appendChild) return;
+    const cur = clamp(S.needs[k], 0, 100);
+    const nxt = clamp(cur + dv, 0, 100);
+    if (Math.abs(nxt - cur) < 1) return;
+    const g = document.createElement('div');
+    g.className = 'bar-ghost ' + (dv > 0 ? 'up' : 'down');
+    g.style.left = Math.min(cur, nxt) + '%';
+    g.style.width = Math.abs(nxt - cur) + '%';
+    fill.parentNode.appendChild(g);
+  });
+}
+function clearHints() {
+  if (typeof document.querySelectorAll !== 'function') return;
+  document.querySelectorAll('.bar-ghost').forEach((e) => { if (e.parentNode) e.parentNode.removeChild(e); });
 }
 
 /* ---------------- 简笔小人 ---------------- */
@@ -1172,49 +1197,143 @@ function resolveChoice(ev, c, isMilestone) {
 /* ============================================================
  * 场景与动作
  * ============================================================ */
+/* 每个场景三层：far 远景天际线（淡墨）· mid 主体建筑 · near 前景小物（浓一点）
+ * 三层随鼠标视差移动；.win 夜晚亮灯；.lamp-dot/.lamp-halo 傍晚起亮 */
 const ART = {
-  home: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M30 60 L110 18 L190 60"/>
-    <rect x="142" y="22" width="10" height="20"/>
-    <circle cx="147" cy="18" r="3"><animate attributeName="cy" values="20;4" dur="3.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.75;0" dur="3.4s" repeatCount="indefinite"/></circle>
-    <circle cx="148" cy="18" r="2.2"><animate attributeName="cy" values="20;2" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.6;0" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/></circle>
-    <rect x="48" y="60" width="124" height="42"/>
-    <rect x="96" y="74" width="26" height="28"/><rect class="win" x="60" y="70" width="18" height="16"/><rect class="win" x="144" y="70" width="18" height="16"/>
-    <path d="M15 102 H205"/></svg>`,
-  park: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <g><animateTransform attributeName="transform" type="rotate" values="-2.2 40 102; 2.2 40 102; -2.2 40 102" dur="5.2s" repeatCount="indefinite"/>
-      <path d="M40 102 V55"/><circle cx="40" cy="42" r="18"/></g>
-    <g><animateTransform attributeName="transform" type="rotate" values="1.8 80 102; -1.8 80 102; 1.8 80 102" dur="4.3s" repeatCount="indefinite"/>
-      <path d="M80 102 V65"/><circle cx="80" cy="55" r="13"/></g>
-    <path d="M120 92 h50 M126 92 v-16 h38 v16"/><path d="M126 76 q19 -10 38 0"/>
-    <path d="M10 102 H210"/></svg>`,
-  school: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="45" y="35" width="130" height="67"/><path d="M45 35 L110 12 L175 35"/>
-    <path d="M110 12 V30"/>
-    <g><animateTransform attributeName="transform" type="rotate" values="0 110 14; 5 110 14; -3 110 14; 0 110 14" dur="2.8s" repeatCount="indefinite"/>
-      <path d="M110 14 l24 6 -24 7"/></g>
-    <rect x="98" y="70" width="24" height="32"/>
-    <rect class="win" x="60" y="50" width="16" height="14"/><rect class="win" x="144" y="50" width="16" height="14"/>
-    <path d="M15 102 H205"/></svg>`,
-  square: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M30 45 h90 l-8 14 h-74 z"/><path d="M40 59 v43 M110 59 v43 M40 70 h70 M40 82 h70"/>
-    <path d="M75 45 V25"/>
-    <g><animateTransform attributeName="transform" type="rotate" values="-3 75 25; 3 75 25; -3 75 25" dur="3.1s" repeatCount="indefinite"/>
-      <path d="M75 25 h40 l-6 10 h-34"/></g>
-    <g><animateTransform attributeName="transform" type="rotate" values="-1.6 160 102; 1.6 160 102; -1.6 160 102" dur="5.6s" repeatCount="indefinite"/>
-      <circle cx="160" cy="80" r="12"/><path d="M160 92 v10 M152 102 h16"/></g>
-    <path d="M10 102 H210"/></svg>`,
-  market: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <g><animateTransform attributeName="transform" type="rotate" values="-1.2 100 40; 1.2 100 40; -1.2 100 40" dur="4.4s" repeatCount="indefinite"/>
-      <path d="M35 40 h120 l10 16 h-140 z"/><path d="M48 40 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0"/></g>
-    <rect x="48" y="56" width="94" height="46"/><circle cx="70" cy="76" r="7"/><circle cx="95" cy="78" r="8"/><circle cx="120" cy="75" r="6"/>
-    <path d="M10 102 H210"/></svg>`,
-  hospital: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="60" y="28" width="100" height="74"/>
-    <path class="keep-accent" d="M110 40 v24 M98 52 h24" stroke="#b3382c"><animate attributeName="opacity" values="1;.4;1" dur="1.8s" repeatCount="indefinite"/></path>
-    <rect class="win" x="72" y="70" width="16" height="14"/><rect class="win" x="132" y="70" width="16" height="14"/>
-    <path d="M50 28 h120" stroke-dasharray="4 5"/>
-    <path d="M15 102 H205"/></svg>`,
+  home: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 102 V62 h24 v40 M44 102 V48 h28 v54 M158 102 V56 h26 v46 M190 102 V68 h18 v34"/>
+      <path d="M50 58 h4 M58 58 h4 M50 68 h4 M58 68 h4 M164 66 h4 M172 66 h4 M164 76 h4 M172 76 h4" stroke-width="1.4"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;16 0;0 0" dur="22s" repeatCount="indefinite"/>
+        <path d="M96 22 q7 -7 14 0 q8 -5 13 2"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30 60 L110 18 L190 60"/>
+      <rect x="142" y="22" width="10" height="20"/>
+      <circle cx="147" cy="18" r="3"><animate attributeName="cy" values="20;4" dur="3.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.75;0" dur="3.4s" repeatCount="indefinite"/></circle>
+      <circle cx="148" cy="18" r="2.2"><animate attributeName="cy" values="20;2" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.6;0" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/></circle>
+      <rect x="48" y="60" width="124" height="42"/>
+      <rect x="96" y="74" width="26" height="28"/><rect class="win" x="60" y="70" width="18" height="16"/><rect class="win" x="144" y="70" width="18" height="16"/>
+      <path d="M15 102 H205"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 102 V54 M12 57 H64"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-3 28 57; 3 28 57; -3 28 57" dur="3.8s" repeatCount="indefinite"/>
+        <path d="M23 57 h10 v14 h-10 z M26 57 v-2 M30 57 v-2"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="2 50 57; -2 50 57; 2 50 57" dur="4.6s" repeatCount="indefinite"/>
+        <path d="M46 57 h8 v10 h-8 z"/></g>
+      <path d="M182 102 q2 -7 4 0 M188 102 q2 -9 4 0 M194 102 q2 -6 4 0 M200 102 q2 -8 4 0"/>
+    </svg>`,
+  },
+  park: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 100 Q40 84 74 94 T146 92 T214 88"/>
+      <path d="M170 100 V62 h12 v38 M186 100 V70 h10 v30" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;10 -6;0 0;-8 -3;0 0" dur="12s" repeatCount="indefinite"/>
+        <path d="M150 20 l7 9 -7 9 -7 -9 z"/><path d="M150 38 q2 6 -2 10 q-4 4 -1 9" stroke-dasharray="2 3"/></g>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;20 2;0 0" dur="16s" repeatCount="indefinite"/>
+        <path d="M56 26 q4 -4 8 0 q4 -4 8 0"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <g><animateTransform attributeName="transform" type="rotate" values="-2.2 40 102; 2.2 40 102; -2.2 40 102" dur="5.2s" repeatCount="indefinite"/>
+        <path d="M40 102 V55"/><circle cx="40" cy="42" r="18"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="1.8 80 102; -1.8 80 102; 1.8 80 102" dur="4.3s" repeatCount="indefinite"/>
+        <path d="M80 102 V65"/><circle cx="80" cy="55" r="13"/></g>
+      <path d="M120 92 h50 M126 92 v-16 h38 v16"/><path d="M126 76 q19 -10 38 0"/>
+      <path d="M10 102 H210"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M196 102 V64 q0 -5 6 -5"/>
+      <circle class="lamp-halo" cx="203" cy="61" r="7"/>
+      <circle class="lamp-dot" cx="203" cy="61" r="3"/>
+      <path d="M16 102 q2 -7 4 0 M22 102 q2 -9 4 0 M28 102 q2 -6 4 0 M120 102 q2 -7 4 0 M126 102 q2 -8 4 0"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;6 -5;12 0" dur="5s" repeatCount="indefinite"/>
+        <path d="M96 74 q-4 -4 -1 -7 q3 1 3 5 q0 -4 3 -5 q3 3 -1 7 z"/></g>
+    </svg>`,
+  },
+  school: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 102 V58 h34 v44 M186 102 V64 h24 v38"/>
+      <path d="M15 68 h6 M27 68 h6 M15 78 h6 M27 78 h6 M192 74 h6 M200 74 h6" stroke-width="1.4"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;-14 0;0 0" dur="20s" repeatCount="indefinite"/>
+        <path d="M150 18 q7 -7 14 0 q8 -5 13 2"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="45" y="35" width="130" height="67"/><path d="M45 35 L110 12 L175 35"/>
+      <path d="M110 12 V30"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="0 110 14; 5 110 14; -3 110 14; 0 110 14" dur="2.8s" repeatCount="indefinite"/>
+        <path d="M110 14 l24 6 -24 7"/></g>
+      <rect x="98" y="70" width="24" height="32"/>
+      <rect class="win" x="60" y="50" width="16" height="14"/><rect class="win" x="144" y="50" width="16" height="14"/>
+      <path d="M15 102 H205"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 108 Q110 93 212 108" stroke-dasharray="5 6"/>
+      <path d="M158 102 v-9 h11 v9 M163 93 v-9 h11 v9 M174 102 v-9 h11 v9" stroke-width="2"/>
+      <path d="M28 102 v-6 M25 96 q3 -4 6 0 M24 102 q2 -5 4 0 M32 102 q2 -6 4 0"/>
+    </svg>`,
+  },
+  square: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 102 V46 h22 v56 M34 102 V34 h26 v68 M34 34 l13 -8 13 8 M170 102 V52 h20 v50 M194 102 V66 h16 v36"/>
+      <path d="M47 26 V16"/>
+      <path d="M13 54 h4 M21 54 h4 M13 64 h4 M21 64 h4 M40 44 h4 M48 44 h4 M40 54 h4 M48 54 h4 M176 62 h4 M182 62 h4" stroke-width="1.4"/>
+      <path d="M118 44 h26 v14 h-26 z M131 58 V76 M122 48 h4 M130 48 h8"/>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30 45 h90 l-8 14 h-74 z"/><path d="M40 59 v43 M110 59 v43 M40 70 h70 M40 82 h70"/>
+      <path d="M75 45 V25"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-3 75 25; 3 75 25; -3 75 25" dur="3.1s" repeatCount="indefinite"/>
+        <path d="M75 25 h40 l-6 10 h-34"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="-1.6 160 102; 1.6 160 102; -1.6 160 102" dur="5.6s" repeatCount="indefinite"/>
+        <circle cx="160" cy="80" r="12"/><path d="M160 92 v10 M152 102 h16"/></g>
+      <path d="M10 102 H210"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 94 h32 M22 94 v8 M46 94 v8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="3.4s" repeatCount="indefinite"/>
+        <circle cx="182" cy="54" r="6"/><path d="M182 60 q-2 8 1 14"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="0 92 102; 16 92 102; 0 92 102" dur="1.8s" repeatCount="indefinite"/>
+        <path d="M88 102 q2 -6 6 -6 q4 0 4 5"/></g>
+      <path d="M106 102 q2 -5 5 -5 q3 0 3 4"/>
+    </svg>`,
+  },
+  market: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 102 V64 h30 v38 M6 64 l4 -8 h22 l4 8 M184 102 V70 h28 v32 M184 70 l3 -6 h22 l3 6"/>
+      <path d="M196 52 h16 v10 h-16 z M204 52 v-6 M199 57 h4 M206 57 h3" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;12 0;0 0" dur="24s" repeatCount="indefinite"/>
+        <path d="M60 20 q7 -7 14 0 q8 -5 13 2"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <g><animateTransform attributeName="transform" type="rotate" values="-1.2 100 40; 1.2 100 40; -1.2 100 40" dur="4.4s" repeatCount="indefinite"/>
+        <path d="M35 40 h120 l10 16 h-140 z"/><path d="M48 40 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0 q6 -12 12 0"/></g>
+      <rect x="48" y="56" width="94" height="46"/><circle cx="70" cy="76" r="7"/><circle cx="95" cy="78" r="8"/><circle cx="120" cy="75" r="6"/>
+      <path d="M10 102 H210"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 92 h30 l-4 10 H20 z M18 92 q13 -8 26 0"/>
+      <circle cx="26" cy="88" r="3"/><circle cx="34" cy="87" r="3.4"/>
+      <path d="M180 94 h22 M183 94 v8 h16 v-8"/>
+      <circle cx="188" cy="86" r="1.8"><animate attributeName="cy" values="88;76" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.7;0" dur="2.2s" repeatCount="indefinite"/></circle>
+      <circle cx="194" cy="86" r="1.4"><animate attributeName="cy" values="88;74" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.55;0" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/></circle>
+    </svg>`,
+  },
+  hospital: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 102 V58 h30 v44 M182 102 V64 h26 v38"/>
+      <path d="M14 68 h5 M24 68 h5 M14 78 h5 M24 78 h5 M188 74 h5 M198 74 h5" stroke-width="1.4"/>
+      <path d="M52 52 v-14 h14 v14 M55 38 h8 M52 52 l-4 10 M66 52 l4 10 M59 42 v6 M56 45 h6"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;-12 0;0 0" dur="19s" repeatCount="indefinite"/>
+        <path d="M140 20 q7 -7 14 0 q8 -5 13 2"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="60" y="28" width="100" height="74"/>
+      <path class="keep-accent" d="M110 40 v24 M98 52 h24" stroke="#b3382c"><animate attributeName="opacity" values="1;.4;1" dur="1.8s" repeatCount="indefinite"/></path>
+      <rect class="win" x="72" y="70" width="16" height="14"/><rect class="win" x="132" y="70" width="16" height="14"/>
+      <path d="M50 28 h120" stroke-dasharray="4 5"/>
+      <path d="M15 102 H205"/></svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 94 h32 M20 94 v8 M44 94 v8 M16 86 h5 M45 86 h3"/>
+      <path d="M190 102 V86 M190 86 q-8 -2 -10 -10 q8 0 10 4 q2 -4 10 -4 q-2 8 -10 10"/>
+      <path d="M96 102 q2 -6 4 0 M102 102 q2 -7 4 0"/>
+    </svg>`,
+  },
 };
 
 const SCENES = {
@@ -1361,14 +1480,54 @@ const ACTIONS = [
     } },
 ];
 
+/* 幽灵条预览：行动 → 身心条上的"影子"（约值，只示意方向与幅度，不出数字） */
+const ACT_HINTS = {
+  meal: () => ({ 饱食: S.family.meal, 心情: 4 }),
+  sleep: { 精力: 100, 清洁: -6 },
+  wash: { 清洁: 42, 心情: 2 },
+  play: { 娱乐: 26, 心情: 7 },
+  study: { 娱乐: -6, 精力: -3 },
+  exercise: { 精力: -9, 清洁: -4 },
+  chore: { 心情: 3 },
+  art: { 心情: 4 },
+  cook: { 饱食: 42 },
+  chat: { 心情: 9 },
+  walk: { 心情: 7 },
+  slide: { 娱乐: 24, 心情: 6 },
+  fish: { 娱乐: 14 },
+  watch: { 心情: 3 },
+  class: { 精力: -8, 娱乐: -6, 心情: -3 },
+  skip: { 娱乐: 10, 心情: 6 },
+  club: { 娱乐: 10 },
+  toy: { 娱乐: 32, 心情: 8 },
+  snack: { 饱食: 26, 心情: 4 },
+  artist: { 娱乐: 14, 心情: 4 },
+  chess: { 娱乐: 6 },
+  deli: { 饱食: 44, 心情: 3 },
+  cure: { 健康: 38 },
+  checkup: { 健康: 5 },
+};
+
 /* ============================================================
  * 渲染
  * ============================================================ */
-function setBar(id, v) { $(id).style.width = clamp(v, 0, 100) + '%'; }
+function setBar(id, v) {
+  const el = $(id);
+  el.style.width = clamp(v, 0, 100) + '%';
+  const dir = barFlash[id];
+  if (dir && el.parentNode && el.parentNode.classList) {
+    const bar = el.parentNode;
+    bar.classList.remove('flash-up', 'flash-down');
+    void bar.offsetWidth; // 重触发动画
+    bar.classList.add('flash-' + dir);
+    delete barFlash[id];
+  }
+}
 
 function render() {
   if (!S) return;
   saveGame(); // 每次渲染即自动存档
+  clearHints();
   // 顶栏
   $('ui-name').textContent = `${S.name}（${S.gender}）`;
   $('ui-age').textContent = `${S.age} 岁`;
@@ -1434,8 +1593,12 @@ function render() {
     btn.onclick = () => switchLocation(id);
     nav.appendChild(btn);
   });
-  // 场景
-  $('scene-art').innerHTML = ART[S.location];
+  // 场景（三层：远 / 中 / 近，随鼠标视差）
+  const art = ART[S.location];
+  $('scene-art').innerHTML =
+    `<div class="lyr lyr-far">${art.far}</div>` +
+    `<div class="lyr lyr-mid">${art.mid}</div>` +
+    `<div class="lyr lyr-near">${art.near}</div>`;
   $('scene-title').textContent = S.location === 'school' ? schoolTitle() : SCENES[S.location].title;
   $('scene-desc').textContent = SCENES[S.location].desc();
   // 动作
@@ -1456,6 +1619,15 @@ function render() {
       setTimeout(() => btn.classList.remove('clicked'), 320);
       doAction(a.run, ACT_ANIM[a.id] || 'stand', a.id);
     };
+    // 幽灵条预览：悬停/聚焦时，身心条上浮现"会补到哪、会耗到哪"
+    const hintSrc = ACT_HINTS[a.id];
+    if (hintSrc && btn.addEventListener) {
+      const show = () => showHint(typeof hintSrc === 'function' ? hintSrc() : hintSrc);
+      btn.addEventListener('mouseenter', show);
+      btn.addEventListener('mouseleave', clearHints);
+      btn.addEventListener('focus', show);
+      btn.addEventListener('blur', clearHints);
+    }
     box.appendChild(btn);
   });
   // 日志
@@ -1699,6 +1871,29 @@ window.addEventListener('DOMContentLoaded', () => {
         addLog(pick(['你戳了戳自己。疼。', '你冲自己做了个鬼脸，把自己逗笑了。', '你原地蹦了一下，心情莫名好了点。']));
         render();
       }
+    });
+  }
+  // 场景三层视差：远慢近快，跟着鼠标轻轻晃
+  const stageEl = $('scene-stage');
+  const finePointer = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches;
+  if (stageEl && stageEl.addEventListener && finePointer && typeof stageEl.getBoundingClientRect === 'function') {
+    const PAR = [['.lyr-far', 6, 2], ['.lyr-mid', 12, 4], ['.lyr-near', 20, 7]];
+    stageEl.addEventListener('mousemove', (e) => {
+      const r = stageEl.getBoundingClientRect();
+      if (!r || !r.width || !r.height) return;
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      PAR.forEach(([sel, fx2, fy2]) => {
+        const el = stageEl.querySelector(sel);
+        if (el && el.style) el.style.transform = `translate(${(-px * fx2).toFixed(1)}px, ${(-py * fy2).toFixed(1)}px)`;
+      });
+    });
+    stageEl.addEventListener('mouseleave', () => {
+      PAR.forEach(([sel]) => {
+        const el = stageEl.querySelector(sel);
+        if (el && el.style) el.style.transform = '';
+      });
     });
   }
 });

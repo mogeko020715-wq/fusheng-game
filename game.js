@@ -180,6 +180,7 @@ const MEAL_SLOTS = [0, 2, 4];           // 早 7 点 / 午 12 点 / 晚 6 点
 const DAYS_PER_YEAR = 6;                // 六个时段为一天，六天一岁
 const START_AGE = 3, END_AGE = 18;
 const MEMORIAL_KEY = 'fusheng_memorials_v1';
+const SAVE_KEY = 'fusheng_save_v1';     // 这一世活着就一直在，落幕即清除
 
 const FAMILY = {
   poor:   { name: '贫寒之家', badge: '贫', home: ['一间漏风的平房', '筒子楼里的一居室'],
@@ -193,7 +194,7 @@ const FAMILY_KEYS = ['poor', 'poor', 'middle', 'middle', 'middle', 'rich']; // �
 
 const SURNAMES = ['王', '李', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '林', '何', '郭'];
 const NAMES_M = ['志强', '建国', '小明', '子轩', '浩然', '铁蛋', '阿福', '一鸣', '念安', '知远', '石头', '晨光'];
-const NAMES_F = ['秀英', '桂芳', '小雨', '诗涵', '欣怡', '招娣', '春花', '静姝', '晚晴', '念慈', '燕子', '繁星'];
+const NAMES_F = ['秀英', '桂芳', '小雨', '诗涵', '欣怡', '望舒', '春花', '静姝', '晚晴', '念慈', '燕子', '繁星'];
 
 const APT_LABEL = (v) => v < 0.85 ? '鲁钝' : v < 1.0 ? '平平' : v < 1.15 ? '出众' : '天资';
 const APT_ORDER = ['学习', '运动', '艺术'];
@@ -233,7 +234,7 @@ const ALL_TAGS = {
   '寒门贵子': '贫寒之家走出重点高中生',
   '无忧无虑': '富贵之家，幸福均值 65 以上',
   '快乐童年': '幸福均值 70 以上的一生',
-  '心事重重': '幸福均值不足 45 的一生',
+  '心事重重': '幸福均值不足 55 的一生',
   '身怀绝技': '任一技艺练到 5 级',
   '文武双全': '体质与智力都达到 75',
   '小有积蓄': '成年时攒下 120 元',
@@ -252,7 +253,7 @@ function computeTags(cause) {
   if (S.familyKey === 'poor' && S.exam === '重点高中') tags.push('寒门贵子');
   if (S.familyKey === 'rich' && happy >= 65) tags.push('无忧无虑');
   if (happy >= 70) tags.push('快乐童年');
-  if (happy < 45) tags.push('心事重重');
+  if (happy < 55) tags.push('心事重重');
   if (Object.values(S.skills).some((s) => s.lvl >= 5)) tags.push('身怀绝技');
   if (S.attrs.体质 >= 75 && S.attrs.智力 >= 75) tags.push('文武双全');
   if (S.money >= 120) tags.push('小有积蓄');
@@ -265,6 +266,7 @@ function computeTags(cause) {
 /* ---------------- 状态 ---------------- */
 let S = null;          // 当前人生
 let eventLock = false; // 弹窗打开时锁定操作
+let currentEventId = null; // 当前打开的事件（存档用）
 
 function newLife() {
   const gender = chance(0.5) ? '男' : '女';
@@ -311,8 +313,10 @@ function gain(attr, v) {
   // 心愿加成：朝着梦想方向的努力 +10%
   const da = S.flags.dream && DREAMS[S.flags.dream] && DREAMS[S.flags.dream].attr;
   const dreamMul = (da === attr && v > 0) ? 1.1 : 1;
+  // 软上限：50 以上成长逐渐放缓，85 以上几乎停滞（让高分需要经营）
+  const soft = v > 0 ? clamp(1 - Math.max(0, S.attrs[attr] - 50) / 35, 0.05, 1) : 1;
   const before = S.attrs[attr];
-  S.attrs[attr] = clamp(round1(S.attrs[attr] + v * mul * dreamMul), 1, 100);
+  S.attrs[attr] = clamp(round1(S.attrs[attr] + v * mul * dreamMul * soft), 1, 100);
   fx(attr, S.attrs[attr] - before);
 }
 function gainNeed(k, v) {
@@ -351,9 +355,9 @@ function decayNeeds() {
   gainNeed('精力', -11 * em);
   gainNeed('清洁', -4);
   gainNeed('娱乐', -7);
-  // 心情向其他需求的均值缓慢靠拢
+  // 心情向其他需求的均值缓慢靠拢（中枢略低于均值，快乐需要经营）
   const avg = (S.needs.饱食 + S.needs.精力 + S.needs.清洁 + S.needs.娱乐) / 4;
-  gainNeed('心情', (avg - S.needs.心情) * 0.18);
+  gainNeed('心情', (avg - 6 - S.needs.心情) * 0.18);
   // 健康：需求见底才会伤身，同一种伤害一天只结算一次
   S.dayHurt = S.dayHurt || {};
   let dmg = 0;
@@ -399,9 +403,9 @@ function afterAction() {
   if (milestoneQueue.length) { runMilestones(); return; }
   // 随机事件
   if (S.eventCooldown > 0) S.eventCooldown--;
-  else if (S.age < END_AGE && chance(0.11)) {
+  else if (S.age < END_AGE && chance(0.085)) {
     const ev = drawEvent();
-    if (ev) { S.eventCooldown = 4; openEvent(ev); return; }
+    if (ev) { S.eventCooldown = 5; openEvent(ev); return; }
   }
   if (S.age >= END_AGE) { endLife('成年'); return; }
 }
@@ -497,7 +501,7 @@ function checkPass(chk) {
 /* ---------------- 事件池 ---------------- */
 const EVENTS = [
   {
-    id: 'cat', title: '巷口的流浪猫', min: 3, max: 9,
+    id: 'cat', maxLife: 2, title: '巷口的流浪猫', min: 3, max: 9,
     text: '放学路上，一只瘦巴巴的流浪猫冲你喵喵叫，尾巴尖都秃了。',
     choices: [
       { t: '省下早饭钱给它买火腿肠', cond: (s) => s.money >= 1, ok: { money: -1, 心情: 10, 魅力: 1, mem: '你喂过一只秃尾巴的流浪猫，它蹭了蹭你的裤脚。' }, failTxt: '你摸摸口袋，空空如也。只能冲它抱歉地笑笑。' },
@@ -506,7 +510,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'fight', title: '胡同里的架', min: 5, max: 13,
+    id: 'fight', maxLife: 2, title: '胡同里的架', min: 5, max: 13,
     text: '巷子里，邻居家两个小孩扭打在一起，尘土飞扬。',
     choices: [
       { t: '上前把他们拉开（魅力检定）', check: { attr: '魅力', dc: 60 }, ok: { 魅力: 2, 心情: 8, mem: '你劝开了胡同里最凶的一场架，大人夸你懂事。' }, fail: { 健康: -4, 心情: -5 }, failTxt: '你挨了一肘子，还被骂「少管闲事」。' },
@@ -525,7 +529,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'money', title: '地上的十块钱', min: 4, max: 15,
+    id: 'money', maxLife: 2, title: '地上的十块钱', min: 4, max: 15,
     text: '人来人往的路口，一张十块钱静静躺在地上，像在对谁使眼色。',
     choices: [
       { t: '捡起来交给警察叔叔', ok: { 心情: 6, 魅力: 1.5, mem: '你把捡到的钱交给了警察叔叔，得到了一面小红旗。' } },
@@ -534,7 +538,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'guest', title: '家里来客人了', min: 3, max: 14,
+    id: 'guest', maxLife: 2, title: '家里来客人了', min: 3, max: 14,
     cond: (s) => s.location === 'home',
     text: '门铃响了，是爸妈的老朋友，拎着大包小包。满屋子的大人笑声让你有点无措。',
     choices: [
@@ -543,7 +547,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'needle', title: '打预防针', min: 3, max: 8,
+    id: 'needle', maxLife: 2, title: '打预防针', min: 3, max: 8,
     text: '学校组织打预防针。队伍排得老长，里面传来小孩此起彼伏的哭声。',
     choices: [
       { t: '咬着牙忍住（体质检定）', check: { attr: '体质', dc: 50 }, ok: { 体质: 2, 心情: 5, mem: '打针你没哭，护士阿姨奖励了你一颗糖。' }, fail: { 心情: -6 }, failTxt: '针还没扎你就哭了，哭完整张脸都是鼻涕。' },
@@ -590,7 +594,9 @@ const EVENTS = [
     ],
   },
   {
-    id: 'rain', title: '突如其来的雨', min: 3, max: 18,
+    id: 'rain', maxLife: 2, title: '突如其来的雨', min: 3, max: 18,
+    cond: (s) => s.location !== 'home' && s.slot <= 4, // 只在户外、白天遇雨
+    weight: 0.6,
     text: '天空毫无预兆地塌下一场大雨，豆大的雨点砸得地面冒烟。',
     choices: [
       { t: '在屋檐下躲雨，看雨发呆', ok: { 心情: 6, 娱乐: 4, mem: '一场豪雨把你困在屋檐下，你第一次发现雨声这么好听。' } },
@@ -598,7 +604,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'birthday', title: '同学的生日会', min: 5, max: 13,
+    id: 'birthday', maxLife: 2, title: '同学的生日会', min: 5, max: 13,
     text: '同桌递来一张手绘请柬：「周六我过生日，来我家玩呀！带上你的零花钱，咱们去放风筝。」',
     choices: [
       { t: '精心准备小礼物去赴约', cond: (s) => s.money >= 3, ok: { money: -3, 魅力: 2, 心情: 12, mem: '那场生日会，你们放着风筝，笑到肚子痛。' } },
@@ -624,7 +630,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'quarrel', title: '深夜的争吵', min: 4, max: 16,
+    id: 'quarrel', maxLife: 2, title: '深夜的争吵', min: 4, max: 16,
     cond: (s) => s.location === 'home',
     text: '半夜，你被压低嗓门的争吵声惊醒。是爸妈。黑暗中，每个字都听得清清楚楚。',
     choices: [
@@ -662,7 +668,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'shoes', title: '崭新的球鞋', min: 7, max: 13,
+    id: 'shoes', maxLife: 2, title: '崭新的球鞋', min: 7, max: 13,
     text: '班里最阔气的同学穿着一双崭新的名牌球鞋，被一群人围着。你低头看了看自己开胶的鞋。',
     choices: [
       { t: '不在意，鞋合脚就行', ok: { 心情: 5, 智力: 0.5 }, okTxt: '你忽然觉得，开胶的鞋也能跑得很快。' },
@@ -697,7 +703,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'oldman', title: '赠书的老者', min: 5, max: 18, weight: 0.4,
+    id: 'oldman', maxLife: 2, title: '赠书的老者', min: 5, max: 18, weight: 0.4,
     text: '路边摆摊的老者叫住你：「娃娃，看你面相，是个读书的料。这本书送你，不要钱。」书很旧，扉页上还有前人批注。',
     choices: [
       { t: '双手接过，道谢', ok: { 智力: 2.5, buff: { name: '灵感迸发', desc: '一本好书在手，学什么都事半功倍。', slots: 8, gainMul: 1.5 }, mem: '一位陌生的老者送过你一本书。你到现在还想不通他为什么选中你。' } },
@@ -1005,9 +1011,9 @@ const MILESTONES = {
     id: 'm15', title: '中考',
     text: '中考三天，考场上安静得能听见笔尖的沙沙声。你写完了最后一门，交卷铃响起的那一刻，心里空落落的。\n成绩揭晓：你考上了『重点高中』',
     dynamic: (s) => {
-      const score = s.attrs.智力 * 0.8 + s.attrs.体质 * 0.1 + s.needs.心情 * 0.2 + rand(0, 25) + (((s.skills.编程 || { lvl: 0 }).lvl >= 4) ? 6 : 0);
-      if (score >= 78) { s.exam = '重点高中'; return { title: '中考 · 金榜题名', okTxt: '重点高中！你盯着录取通知看了很久，手都有点抖。' }; }
-      if (score >= 58) { s.exam = '普通高中'; return { title: '中考 · 尘埃落定', okTxt: '普通高中。不算惊艳，但也是个新起点。' }; }
+      const score = s.attrs.智力 + s.needs.心情 * 0.15 + rand(0, 20) + (((s.skills.编程 || { lvl: 0 }).lvl >= 4) ? 6 : 0);
+      if (score >= 98) { s.exam = '重点高中'; return { title: '中考 · 金榜题名', okTxt: '重点高中！你盯着录取通知看了很久，手都有点抖。' }; }
+      if (score >= 80) { s.exam = '普通高中'; return { title: '中考 · 尘埃落定', okTxt: '普通高中。不算惊艳，但也是个新起点。' }; }
       s.exam = '职业高中'; return { title: '中考 · 另一条路', okTxt: '职业高中。爸妈安慰你说，三百六十行，行行出状元。' };
     },
     choices: [{ t: '收下录取通知书', ok: {} }],
@@ -1084,6 +1090,10 @@ function runMilestones() {
 function drawEvent() {
   const pool = EVENTS.filter((e) => {
     if (S.age < e.min || S.age > e.max) return false;
+    if (e.maxLife) {
+      S.flags.evCount = S.flags.evCount || {};
+      if ((S.flags.evCount[e.id] || 0) >= e.maxLife) return false;
+    }
     if (e.cond && !e.cond(S)) return false;
     return true;
   });
@@ -1094,7 +1104,12 @@ function drawEvent() {
 
 function openEvent(ev, isMilestone = false) {
   eventLock = true;
-  if (ev && ev.id) S.flags['seen:' + ev.id] = true;
+  currentEventId = ev && ev.id ? ev.id : null;
+  if (ev && ev.id) {
+    S.flags['seen:' + ev.id] = true;
+    S.flags.evCount = S.flags.evCount || {};
+    S.flags.evCount[ev.id] = (S.flags.evCount[ev.id] || 0) + 1;
+  }
   if (isMilestone) Sound.play('chime');
   $('modal-event').classList.remove('hidden');
   $('event-title').textContent = ev.title;
@@ -1124,6 +1139,7 @@ function openEvent(ev, isMilestone = false) {
     btn.onclick = () => resolveChoice(ev, { ok: {} }, isMilestone);
     box.appendChild(btn);
   }
+  saveGame(); // 弹窗状态也存档（刷新后事件重开）
 }
 
 let pendingAnim = null; // 事件弹窗关闭后要播的小人动画
@@ -1142,6 +1158,7 @@ function resolveChoice(ev, c, isMilestone) {
   $('event-continue').onclick = () => {
     $('modal-event').classList.add('hidden');
     eventLock = false;
+    currentEventId = null;
     if (pendingAnim) { const pa = pendingAnim; pendingAnim = null; setTimeout(() => actorAnim(pa), 80); }
     if (!S.alive) return; // 结局流程会接管
     if (isMilestone) { runMilestones(); return; }
@@ -1290,7 +1307,7 @@ const ACTIONS = [
       else { gainSkill('钓鱼', 4); addLog('鱼没钓到，但你把「姜太公钓鱼」理解透了。'); }
     } },
   { id: 'watch', loc: 'park', label: '观察花鸟虫鱼', cond: () => S.age <= 9, run: () => {
-      gain('智力', 0.6 * S.apt.学习); gainNeed('心情', 3);
+      gain('智力', 0.4 * S.apt.学习); gainNeed('心情', 3);
       addLog('你看蚂蚁搬家、看蜻蜓点水，一看就是半天。');
     } },
   /* ---- 学堂 ---- */
@@ -1302,7 +1319,7 @@ const ACTIONS = [
     } },
   /* ---- 广场 ---- */
   { id: 'book', loc: 'square', label: '书店买书', cost: 8, cond: () => S.money >= 8, run: () => {
-      gainMoney(-8); gain('智力', 1.5);
+      gainMoney(-8); gain('智力', 1.2);
       addBuff('灵感迸发', '新书在手，学什么都事半功倍。', 6, { gainMul: 1.5 });
       addLog('你在旧书店淘到一本好书，如获至宝。');
     } },
@@ -1315,7 +1332,7 @@ const ACTIONS = [
       addLog('一串糖葫芦下肚，甜到了心里。');
     } },
   { id: 'artist', loc: 'square', label: '看街头艺人', cond: () => true, run: () => { gainNeed('娱乐', 14); gainNeed('心情', 4); addLog('街头艺人翻着跟头，你看得津津有味。'); } },
-  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => { gain('智力', 0.8); gainNeed('娱乐', 6); addLog('你在棋摊边看了两盘，似懂非懂。'); } },
+  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => { gain('智力', 0.4); gainNeed('娱乐', 6); addLog('你在棋摊边看了两盘，似懂非懂。'); } },
   /* ---- 菜市场 ---- */
   { id: 'veg', loc: 'market', label: '买菜', cost: 3, cond: () => S.money >= 3, run: () => {
       gainMoney(-3); S.flags.ingredients = (S.flags.ingredients || 0) + 1;
@@ -1351,6 +1368,7 @@ function setBar(id, v) { $(id).style.width = clamp(v, 0, 100) + '%'; }
 
 function render() {
   if (!S) return;
+  saveGame(); // 每次渲染即自动存档
   // 顶栏
   $('ui-name').textContent = `${S.name}（${S.gender}）`;
   $('ui-age').textContent = `${S.age} 岁`;
@@ -1498,10 +1516,62 @@ function saveMemorial(entry) {
   try { localStorage.setItem(MEMORIAL_KEY, JSON.stringify(list.slice(0, 30))); } catch (e) { /* 忽略 */ }
 }
 
+/* ============================================================
+ * 存档系统：刷新 / 退出重进，这一世接着过
+ * —— 人生仍无法读档重来，只是允许「中场休息」
+ * ============================================================ */
+function saveGame() {
+  if (!S || !S.alive) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      v: 1,
+      state: S,
+      pendingEvent: eventLock ? currentEventId : null,
+      queue: milestoneQueue.map((m) => m.id).filter(Boolean),
+      savedAt: Date.now(),
+    }));
+  } catch (e) { /* 存储失败不打扰 */ }
+}
+function loadSave() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!d || d.v !== 1 || !d.state || !d.state.attrs || !d.state.needs || !d.state.flags) return null;
+    return d;
+  } catch (e) { return null; }
+}
+function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 忽略 */ }
+}
+function findEventById(id) {
+  if (!id) return null;
+  return EVENTS.find((e) => e.id === id) || Object.values(MILESTONES).find((m) => m.id === id) || null;
+}
+function resumeLife() {
+  const d = loadSave();
+  if (!d) return false;
+  S = d.state;
+  eventLock = false;
+  currentEventId = null;
+  milestoneQueue = (d.queue || []).map(findEventById).filter(Boolean);
+  Sound.play('page');
+  $('screen-start').classList.add('hidden');
+  $('screen-end').classList.add('hidden');
+  $('screen-game').classList.remove('hidden');
+  render();
+  if (d.pendingEvent) {
+    const ev = findEventById(d.pendingEvent);
+    if (ev) { openEvent(ev, /^m\d+$/.test(ev.id)); return true; }
+  }
+  if (milestoneQueue.length) runMilestones();
+  return true;
+}
+
 function endLife(cause) {
   if (!S || !S.alive) return;
   S.alive = false;
   eventLock = false;
+  currentEventId = null;
+  clearSave(); // 这一世落幕，存档随之消散
   Sound.play('bell');
   const verdict = buildVerdict(cause);
   const tags = computeTags(cause);
@@ -1535,6 +1605,7 @@ function endLife(cause) {
  * ============================================================ */
 function startLife() {
   newLife();
+  clearSave(); // 新的一世，旧的存档让位
   milestoneQueue = [];
   checkMilestones();
   Sound.play('page');
@@ -1601,6 +1672,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!m) Sound.play('pop');
   };
   $('btn-born').onclick = startLife;
+  // 继续上一世
+  const bc = $('btn-continue');
+  const saved = loadSave();
+  if (saved) {
+    bc.classList.remove('hidden');
+    bc.textContent = `📿 继续上一世 · ${saved.state.name}（${saved.state.age} 岁 · 第 ${saved.state.day} 天）`;
+    bc.onclick = () => { resumeLife(); };
+  }
   $('btn-reborn').onclick = startLife;
   $('btn-to-title').onclick = () => {
     $('screen-end').classList.add('hidden');

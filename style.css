@@ -63,6 +63,10 @@ h3 {
 .ink-btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 4px 0 var(--shadow); }
 .ink-btn:active { transform: translate(1px,1px); box-shadow: none; }
 .ink-btn.big { font-size: 22px; padding: 12px 40px; letter-spacing: .35em; }
+.ink-btn.continue {
+  background: #fff; color: var(--accent); border-color: var(--accent);
+  font-size: 15px; letter-spacing: .1em;
+}
 .ink-btn.ghost { background: transparent; color: var(--ink); }
 .ink-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
 

@@ -40,6 +40,8 @@ const driver = `
   const origOpen = openEvent;
   let curEv = null;
   openEvent = function(ev, m) { curEv = ev.id || 'milestone'; stat.events[curEv] = (stat.events[curEv]||0)+1; origOpen(ev, m); };
+  const origEnd = endLife;
+  endLife = function(cause) { stat.lastCause = cause; origEnd(cause); };
 
   function reasonablePlay() {
     let guard = 0;
@@ -95,14 +97,15 @@ const driver = `
     reasonablePlay();
     // 统计
     stat.lifeDays.push(S.day);
-    if (!S.alive || S.age < 18) { stat.death++; stat.deathAges.push(S.age); }
+    const diedYoung = stat.lastCause === '夭';
+    if (diedYoung) { stat.death++; stat.deathAges.push(S.age); }
     stat.exam[S.exam || '无']++;
     stat.happy.push(Math.round(S.happinessSum / S.happinessCnt));
     ['体质','智力','魅力'].forEach(k => stat.attrs[k].push(Math.round(S.attrs[k])));
     stat.money.push(S.money);
     if (S.flags.dream) { stat.dreamTotal++; if (dreamFulfilled()) stat.dreamOk++; }
     if (S.flags.arcDone) stat.arcs++;
-    computeTags(S.alive && S.age >= 18 ? '成年' : '夭').forEach(t => stat.tags[t] = (stat.tags[t]||0)+1);
+    computeTags(diedYoung ? '夭' : '成年').forEach(t => stat.tags[t] = (stat.tags[t]||0)+1);
     if (Object.values(S.skills).some(s => s.lvl >= 5)) stat.skills5++;
     (S.buffs||[]).forEach(b => stat.buffSeen[b.name] = (stat.buffSeen[b.name]||0)+1);
   }

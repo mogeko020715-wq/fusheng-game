@@ -1,0 +1,523 @@
+/* ========== 浮生 · 众生一梦 ==========
+   黑白简笔手绘风 · 纸墨质感 */
+
+:root {
+  --ink: #1c1c1c;
+  --paper: #f5f2ea;
+  --paper-dark: #ece7db;
+  --gray: #8a867d;
+  --accent: #b3382c;      /* 朱砂红，只用于关键数字 */
+  --shadow: rgba(28,28,28,.18);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(28,28,28,.03), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(28,28,28,.04), transparent 40%);
+  color: var(--ink);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", "Songti SC", serif;
+  min-height: 100vh;
+  line-height: 1.7;
+}
+
+/* ---------- 手绘感盒子 ---------- */
+.sketch-box {
+  background: #fbf9f3;
+  border: 2px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  box-shadow: 3px 4px 0 var(--shadow);
+  padding: 16px 18px;
+}
+
+h2 { letter-spacing: .3em; text-align: center; margin-bottom: 10px; }
+h3 {
+  font-size: 14px;
+  letter-spacing: .25em;
+  border-bottom: 1.5px dashed var(--gray);
+  margin: 12px 0 8px;
+  padding-bottom: 3px;
+  color: var(--ink);
+}
+.dim { color: var(--gray); font-size: 13px; }
+.accent { color: var(--accent); font-weight: bold; }
+.hidden { display: none !important; }
+
+/* ---------- 按钮 ---------- */
+.ink-btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 225px 12px 205px 12px / 12px 205px 12px 225px;
+  padding: 8px 22px;
+  cursor: pointer;
+  margin: 6px 6px 0 0;
+  transition: transform .08s, box-shadow .08s;
+  box-shadow: 2px 3px 0 var(--shadow);
+}
+.ink-btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 4px 0 var(--shadow); }
+.ink-btn:active { transform: translate(1px,1px); box-shadow: none; }
+.ink-btn.big { font-size: 22px; padding: 12px 40px; letter-spacing: .35em; }
+.ink-btn.ghost { background: transparent; color: var(--ink); }
+.ink-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+/* ---------- 屏幕 ---------- */
+.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 16px;
+}
+
+/* ---------- 开始界面 ---------- */
+.start-inner { max-width: 560px; text-align: center; padding: 40px 36px; }
+.game-title {
+  font-size: 52px;
+  letter-spacing: .18em;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+.game-title.small { font-size: 34px; }
+.game-title .dot { color: var(--accent); }
+.subtitle { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+.intro-text p { margin: 6px 0; }
+.intro-hint { color: var(--accent); margin-top: 14px !important; }
+.credit { margin-top: 26px; font-size: 12px; color: var(--gray); }
+
+/* ---------- 顶栏 ---------- */
+#topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; justify-content: space-between; flex-wrap: wrap;
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+  padding: 10px 20px;
+  font-size: 17px;
+}
+#topbar .who span, #topbar .when span { margin-right: 16px; }
+.family-badge {
+  border: 1.5px solid var(--ink);
+  border-radius: 12px 3px 12px 3px;
+  padding: 1px 10px;
+  font-size: 14px;
+}
+
+/* ---------- 三栏布局 ---------- */
+#screen-game { display: block; padding: 0; }
+#layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  gap: 14px;
+  padding: 16px 18px 30px;
+  max-width: 1280px;
+  margin: 0 auto;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  #layout { grid-template-columns: 1fr; }
+}
+
+/* ---------- 属性条 ---------- */
+.attr-row, .need-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 7px 0; font-size: 14px;
+}
+.attr-row .attr-name { width: 34px; }
+.attr-num { width: 26px; text-align: right; font-size: 13px; color: var(--accent); font-weight: bold; }
+.bar {
+  flex: 1; height: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px 3px 8px 3px;
+  background: #fff;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: repeating-linear-gradient(-45deg, var(--ink), var(--ink) 3px, #3a3a3a 3px, #3a3a3a 6px);
+  transition: width .35s;
+}
+.bar-fill.health { background: repeating-linear-gradient(-45deg, var(--accent), var(--accent) 3px, #8c271e 3px, #8c271e 6px); }
+.need-row span:first-child { width: 34px; }
+
+.apt-list { font-size: 13px; }
+.apt-list div { display: flex; justify-content: space-between; padding: 1px 0; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  border: 1.5px solid var(--ink);
+  border-radius: 10px 4px 10px 4px;
+  padding: 1px 9px;
+  font-size: 13px;
+  background: #fff;
+}
+.tag.bad { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- 中栏 ---------- */
+#locations { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.loc-btn {
+  font-family: inherit; font-size: 15px;
+  background: transparent; color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 12px 4px 12px 4px;
+  padding: 4px 14px; cursor: pointer;
+}
+.loc-btn.active { background: var(--ink); color: var(--paper); }
+.loc-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+#scene-art { text-align: center; margin: 4px 0 8px; }
+#scene-art svg { max-width: 100%; height: 130px; }
+
+#scene-title { text-align: center; font-size: 20px; letter-spacing: .3em; margin-bottom: 2px; }
+#scene-desc { text-align: center; color: var(--gray); font-size: 14px; min-height: 22px; margin-bottom: 12px; }
+
+#actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.act-btn {
+  font-family: inherit; font-size: 15px;
+  background: #fff; color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 15px 5px 15px 5px / 5px 15px 5px 15px;
+  padding: 8px 16px; cursor: pointer;
+  box-shadow: 2px 2px 0 var(--shadow);
+  transition: transform .08s;
+}
+.act-btn:hover { transform: translate(-1px,-1px); }
+.act-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.act-btn .cost { font-size: 12px; color: var(--gray); }
+.act-btn .cost.no { color: var(--accent); }
+
+/* ---------- 右栏 ---------- */
+#panel-right { display: flex; flex-direction: column; gap: 14px; }
+.log-box { flex: 1; min-height: 220px; }
+#log {
+  height: 300px; overflow-y: auto;
+  font-size: 13.5px; line-height: 1.8;
+  padding-right: 4px;
+}
+#log p { border-bottom: 1px dotted var(--paper-dark); padding: 2px 0; }
+#log .log-day { color: var(--accent); font-weight: bold; margin-top: 4px; }
+#log .log-event { color: var(--ink); }
+#log .log-sys { color: var(--gray); }
+
+/* ---------- 弹窗 ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(28,28,28,.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-box { max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; }
+#event-text { margin: 10px 0 16px; font-size: 16px; }
+#event-choices { display: flex; flex-direction: column; gap: 8px; }
+.choice-btn {
+  font-family: inherit; font-size: 15.5px; text-align: left;
+  background: #fff; border: 2px solid var(--ink);
+  border-radius: 12px 5px 12px 5px;
+  padding: 9px 14px; cursor: pointer;
+}
+.choice-btn:hover { background: var(--ink); color: var(--paper); }
+#event-result-text { margin: 12px 0; font-size: 16px; white-space: pre-line; }
+
+/* ---------- 结局 ---------- */
+.end-inner { max-width: 620px; text-align: center; padding: 36px 34px; }
+.end-verdict { font-size: 18px; margin: 14px 0 20px; white-space: pre-line; }
+.end-stats {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 18px;
+}
+.end-stats .tag { font-size: 14px; padding: 4px 12px; }
+#end-memories { text-align: left; font-size: 14.5px; margin: 0 auto 20px; max-width: 480px; }
+#end-memories p { padding: 3px 0; border-bottom: 1px dotted var(--paper-dark); }
+
+/* ---------- 往生录 ---------- */
+#memorial-list { margin: 12px 0; max-height: 50vh; overflow-y: auto; }
+#memorial-list .mem-item {
+  border-bottom: 1px dashed var(--gray);
+  padding: 8px 2px; font-size: 14.5px; text-align: left;
+}
+#memorial-list .mem-item .mem-name { font-weight: bold; }
+#memorial-list .empty { text-align: center; color: var(--gray); padding: 20px 0; }
+
+#page-foot {
+  text-align: center; font-size: 12px; color: var(--gray);
+  padding: 14px 0 20px; border-top: 1.5px dashed var(--gray);
+}
+
+
+/* ==========================================================
+   第二版：时段光影 · 场景动效 · 小人 · 反馈
+   ========================================================== */
+
+/* ---------- 场景舞台 ---------- */
+#scene-stage {
+  position: relative;
+  height: 172px;
+  margin: 4px 0 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 14px 5px 14px 5px / 5px 14px 5px 14px;
+  background: #fbf9f3;
+  overflow: hidden;
+  transition: background .9s ease;
+}
+#scene-stage.slot-0 { background: #f6efdd; }
+#scene-stage.slot-1, #scene-stage.slot-2 { background: #fbf9f3; }
+#scene-stage.slot-3 { background: #f6f2e7; }
+#scene-stage.slot-4 { background: #f0e4cf; }
+#scene-stage.slot-5 { background: #2b2a25; }
+
+#scene-art {
+  position: absolute; left: 0; right: 0; bottom: 4px;
+  text-align: center; z-index: 1;
+  transition: opacity .25s, transform .25s;
+}
+#scene-art svg { max-width: 100%; height: 120px; }
+
+/* ---------- 天空：太阳 / 月亮 / 星星 ---------- */
+#sky { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.cel { position: absolute; opacity: 0; transition: left .9s ease, top .9s ease, opacity .6s; }
+.cel-sun {
+  width: 24px; height: 24px; left: 6%; top: 52%;
+  border: 2.5px solid var(--ink); border-radius: 50%;
+}
+.cel-sun::after {
+  content: ''; position: absolute; inset: -8px;
+  border: 2px dashed var(--ink); border-radius: 50%;
+  animation: sunSpin 26s linear infinite;
+}
+@keyframes sunSpin { to { transform: rotate(360deg); } }
+.slot-0 .cel-sun { opacity: .9; left: 8%;  top: 48%; }
+.slot-1 .cel-sun { opacity: .9; left: 30%; top: 14%; }
+.slot-2 .cel-sun { opacity: .9; left: 48%; top: 5%;  }
+.slot-3 .cel-sun { opacity: .9; left: 66%; top: 16%; }
+.slot-4 .cel-sun { opacity: .9; left: 85%; top: 46%; }
+.cel-moon {
+  width: 22px; height: 22px; left: 70%; top: 30%;
+  border-radius: 50%; background: #e8e2d2;
+}
+.cel-moon::after {
+  content: ''; position: absolute; left: 9px; top: -4px;
+  width: 19px; height: 19px; border-radius: 50%;
+  background: #2b2a25;
+}
+.slot-5 .cel-moon { opacity: 1; top: 10%; }
+.stars i {
+  position: absolute; width: 3px; height: 3px;
+  border-radius: 50%; background: #e8e2d2; opacity: 0;
+}
+.slot-5 .stars i { animation: twinkle 2.4s ease-in-out infinite alternate; }
+.slot-5 .stars i:nth-child(2n) { animation-delay: .8s; }
+.slot-5 .stars i:nth-child(3n) { animation-delay: 1.5s; }
+@keyframes twinkle { from { opacity: .15; } to { opacity: .95; } }
+
+/* ---------- 夜晚反白 + 窗灯 ---------- */
+#scene-stage.slot-5 #scene-art svg *,
+#scene-stage.slot-5 #actor * { stroke: #d9d4c7; }
+#scene-stage.slot-5 .keep-accent { stroke: var(--accent) !important; }
+#scene-stage.slot-5 #actor text { stroke: none; fill: #d9d4c7; }
+#scene-stage .win { fill: transparent; transition: fill .7s; }
+#scene-stage.slot-4 .win,
+#scene-stage.slot-5 .win { fill: rgba(240, 196, 92, .7); }
+
+/* ---------- 换场过渡 ---------- */
+#scene-stage.swap-out #scene-art,
+#scene-stage.swap-out #actor { opacity: 0; transform: translateX(-18px); }
+#scene-stage.swap-in #scene-art,
+#scene-stage.swap-in #actor { animation: sceneIn .38s ease; }
+@keyframes sceneIn {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+#scene-title { transition: none; }
+#scene-title.pop { animation: titlePop .5s ease; }
+@keyframes titlePop {
+  0%   { transform: scale(.82); opacity: .2; letter-spacing: .5em; }
+  100% { transform: scale(1);   opacity: 1;  letter-spacing: .3em; }
+}
+
+/* ---------- 简笔小人 ---------- */
+#actor {
+  position: absolute; left: 15%; bottom: 6px;
+  width: 52px; height: 70px; z-index: 2;
+  pointer-events: none; overflow: visible;
+  transition: opacity .25s, transform .25s;
+}
+#actor .pose { display: none; }
+#actor .pose-stand { display: block; }
+#actor.ps-sit .pose-stand,
+#actor.ps-lie .pose-stand,
+#actor.ps-lie .pose-sit { display: none; }
+#actor.ps-sit .pose-sit { display: block; }
+#actor.ps-lie .pose-lie { display: block; }
+#actor text { stroke: none; fill: var(--ink); font-family: inherit; }
+#actor .whole { transform-origin: 30px 66px; }
+#actor .pose-stand .whole { animation: actorBob 2.6s ease-in-out infinite; }
+#actor.weak .pose-stand .whole { animation: actorWeak 3.2s ease-in-out infinite; }
+#actor.happy .pose-stand .whole { animation: actorBob 1.5s ease-in-out infinite; }
+@keyframes actorBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes actorWeak {
+  0%,100% { transform: translateY(1px) rotate(3deg); }
+  50%     { transform: translateY(2.5px) rotate(3.5deg); }
+}
+#actor .leg-l, #actor .leg-r { transform-origin: 30px 46px; }
+#actor.anim-walk .whole { animation: actorTravel .9s linear; }
+#actor.anim-walk .leg-l { animation: legSwing .22s linear infinite alternate; }
+#actor.anim-walk .leg-r { animation: legSwing .22s linear infinite alternate-reverse; }
+#actor.anim-run .whole { animation: actorTravel .7s linear; }
+#actor.anim-run .leg-l { animation: legSwing .14s linear infinite alternate; }
+#actor.anim-run .leg-r { animation: legSwing .14s linear infinite alternate-reverse; }
+@keyframes legSwing { from { transform: rotate(16deg); } to { transform: rotate(-16deg); } }
+@keyframes actorTravel {
+  0%   { transform: translateX(0); }
+  40%  { transform: translateX(34px) translateY(-2px); }
+  100% { transform: translateX(0); }
+}
+#actor.anim-jump .whole { animation: actorJump .9s ease; }
+@keyframes actorJump {
+  0%,100% { transform: translateY(0); }
+  35% { transform: translateY(-14px); }
+  60% { transform: translateY(0); }
+  78% { transform: translateY(-6px); }
+}
+#actor.anim-stand .whole { animation: actorNod .9s ease; }
+@keyframes actorNod {
+  0%,100% { transform: rotate(0); }
+  30% { transform: rotate(6deg); }
+  60% { transform: rotate(-2deg); }
+}
+#actor.anim-sit .whole,
+#actor.anim-eat .whole { animation: sitBob .9s ease; }
+@keyframes sitBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+#actor .z { opacity: 0; }
+#actor.anim-sleep .z1 { animation: floatZ 1.5s linear infinite; }
+#actor.anim-sleep .z2 { animation: floatZ 1.5s linear .5s infinite; }
+#actor.anim-sleep .z3 { animation: floatZ 1.5s linear 1s infinite; }
+@keyframes floatZ {
+  0% { opacity: 0; transform: translateY(0); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ---------- 数值飘字 ---------- */
+#fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 80; }
+.float-txt {
+  position: fixed; font-size: 14px; font-weight: bold; color: var(--ink);
+  text-shadow: 0 1px 0 var(--paper), 0 -1px 0 var(--paper), 1px 0 0 var(--paper), -1px 0 0 var(--paper);
+  animation: floatUp 1.2s ease-out forwards;
+}
+.float-txt.neg { color: var(--accent); }
+@keyframes floatUp {
+  0%   { opacity: 0; transform: translateY(6px); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+/* ---------- 需求低位预警 ---------- */
+.need-row.low span:first-child { color: var(--accent); font-weight: bold; }
+.need-row.low .bar { border-color: var(--accent); animation: lowShake 1.6s ease-in-out infinite; }
+.need-row.low .bar-fill {
+  background: repeating-linear-gradient(-45deg, var(--accent), var(--accent) 3px, #8c271e 3px, #8c271e 6px);
+}
+@keyframes lowShake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+
+/* ---------- 交互小件 ---------- */
+.kbd {
+  display: inline-block; font-size: 10px; line-height: 1;
+  border: 1px solid currentColor; border-radius: 3px;
+  padding: 2px 3px; margin-left: 6px; opacity: .5; vertical-align: 2px;
+}
+.act-btn.clicked { animation: btnPop .3s ease; }
+@keyframes btnPop { 0% { transform: scale(1); } 40% { transform: scale(.92); } 100% { transform: scale(1); } }
+.snd-btn {
+  background: none; border: none; font-size: 16px;
+  cursor: pointer; font-family: inherit; padding: 0 2px;
+}
+#log p:first-child { animation: logIn .45s ease; }
+@keyframes logIn {
+  from { opacity: 0; transform: translateY(-6px); background: rgba(179,56,44,.08); }
+  to   { opacity: 1; transform: translateY(0);   background: transparent; }
+}
+.attr-row[title], .need-row[title], .apt-list div[title], .tag[title] { cursor: help; }
+
+
+/* ==========================================================
+   结局 · 人生长卷
+   ========================================================== */
+#end-scroll {
+  margin: 4px auto 18px;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1.5px dashed var(--gray);
+  border-radius: 12px 4px 12px 4px;
+  background: #fbf9f3;
+}
+.scroll-inner { position: relative; height: 122px; min-width: 100%; }
+.scroll-ground {
+  position: absolute; left: 24px; right: 24px; bottom: 36px;
+  border-top: 2px dashed var(--ink);
+}
+.scroll-tick {
+  position: absolute; bottom: 22px; transform: translateX(-50%);
+  text-align: center; font-size: 11px; color: var(--gray);
+}
+.scroll-tick i { display: block; width: 2px; height: 9px; background: var(--ink); margin: 0 auto 2px; }
+.scroll-node {
+  position: absolute; bottom: 44px; transform: translateX(-50%);
+  cursor: help; z-index: 3;
+}
+.scroll-node .dot {
+  display: block; width: 10px; height: 10px;
+  border: 2px solid var(--ink); border-radius: 50%;
+  background: var(--paper);
+  transition: background .2s;
+}
+.scroll-node:hover .dot { background: var(--ink); }
+.scroll-node b {
+  position: absolute; top: -9px; right: -11px;
+  font-size: 10px; color: var(--accent);
+}
+.scroll-node .mem-tip {
+  display: none;
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  width: 210px; max-height: 130px; overflow-y: auto;
+  background: #fff; border: 1.5px solid var(--ink);
+  border-radius: 10px 4px 10px 4px;
+  padding: 8px 10px; font-size: 12.5px; line-height: 1.6;
+  text-align: left; z-index: 6;
+  box-shadow: 2px 3px 0 var(--shadow);
+}
+.scroll-node:hover .mem-tip { display: block; }
+.scroll-flag {
+  position: absolute; bottom: 44px; transform: translateX(-50%);
+  font-size: 20px; color: var(--ink);
+}
+.scroll-flag.die { color: var(--accent); }
+.scroll-walker {
+  position: absolute; left: 40px; bottom: 38px;
+  width: 38px; height: 52px;
+  animation-name: walkAcross;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.scroll-walker svg { width: 100%; height: 100%; overflow: visible; }
+.scroll-walker .pose { display: none; }
+.scroll-walker .pose-stand { display: block; }
+.scroll-walker .leg-l, .scroll-walker .leg-r {
+  transform-origin: 30px 46px;
+  animation: legSwing .22s linear infinite alternate;
+}
+.scroll-walker .leg-r { animation-direction: alternate-reverse; }
+.scroll-walker.fallen .pose-stand { display: none; }
+.scroll-walker.fallen .pose-lie { display: block; }
+.scroll-walker.fallen .leg-l, .scroll-walker.fallen .leg-r { animation: none; }
+@keyframes walkAcross {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--walk-w)); }
+}

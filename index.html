@@ -95,6 +95,10 @@
             <path d="M30 27 L20 38 M30 27 L40 38"/>
             <path class="leg-l" d="M30 46 L23 66"/>
             <path class="leg-r" d="M30 46 L37 66"/>
+            <g class="prop prop-steam">
+              <circle cx="42" cy="8" r="2.2"><animate attributeName="cy" values="12;-2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.7;0" dur="1.6s" repeatCount="indefinite"/></circle>
+              <circle cx="46" cy="10" r="1.6"><animate attributeName="cy" values="14;0" dur="1.6s" begin="-.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.55;0" dur="1.6s" begin="-.8s" repeatCount="indefinite"/></circle>
+            </g>
           </g></g>
           <g class="pose pose-sit"><g class="whole">
             <circle cx="30" cy="22" r="7"/>
@@ -102,6 +106,33 @@
             <path d="M30 35 L21 44 M30 35 L39 44"/>
             <path d="M30 50 L42 53 L42 66"/>
             <path d="M30 50 L40 55 L40 66"/>
+            <g class="prop prop-rod">
+              <path d="M39 44 L58 18"/>
+              <path d="M58 18 V44" stroke-dasharray="2 3"/>
+              <circle cx="58" cy="46" r="2"><animate attributeName="cy" values="46;43;46" dur="1.8s" repeatCount="indefinite"/></circle>
+            </g>
+            <g class="prop prop-book">
+              <path d="M21 46 Q30 41 30 47 Q30 41 39 46 L39 52 Q30 48 30 53 Q30 48 21 52 Z" fill="#fff"/>
+              <path d="M25 46 Q28 44 30 46">
+                <animateTransform attributeName="transform" type="rotate" values="0 30 50; -14 30 50; 0 30 50" dur="2.2s" repeatCount="indefinite"/>
+              </path>
+            </g>
+            <g class="prop prop-notes">
+              <text x="42" y="18" font-size="10" stroke="none" fill="#1c1c1c">♪<animate attributeName="y" values="20;4" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></text>
+              <text x="49" y="14" font-size="12" stroke="none" fill="#1c1c1c">♫<animate attributeName="y" values="22;2" dur="2s" begin="-1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2s" begin="-1s" repeatCount="indefinite"/></text>
+            </g>
+            <g class="prop prop-easel">
+              <path d="M48 34 L44 66 M48 34 L54 66 M48 34 V30"/>
+              <rect x="41" y="34" width="14" height="11" fill="#fff"/>
+              <path d="M39 42 L44 39" class="easel-brush">
+                <animateTransform attributeName="transform" type="rotate" values="0 39 44; -18 39 44; 0 39 44" dur="1.1s" repeatCount="indefinite"/>
+              </path>
+            </g>
+            <g class="prop prop-bubble">
+              <circle cx="38" cy="10" r="1.6"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" repeatCount="indefinite"/></circle>
+              <circle cx="43" cy="8" r="1.6"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" begin="-.4s" repeatCount="indefinite"/></circle>
+              <circle cx="48" cy="6" r="1.6"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" begin="-.8s" repeatCount="indefinite"/></circle>
+            </g>
           </g></g>
           <g class="pose pose-lie"><g class="whole">
             <circle cx="15" cy="58" r="7"/>
@@ -114,6 +145,15 @@
             <text class="z z3" x="8" y="24" font-size="15">z</text>
           </g>
         </svg>
+        <div id="actor-fx" aria-hidden="true">
+          <span class="mb mb-happy1">♪</span>
+          <span class="mb mb-happy2">♡</span>
+          <span class="mb mb-low">…</span>
+          <span class="mb mb-sick">✳</span>
+          <span class="star st1">✦</span>
+          <span class="star st2">✦</span>
+          <span class="star st3">✦</span>
+        </div>
       </div>
       <div id="scene-title"></div>
       <div id="scene-desc"></div>

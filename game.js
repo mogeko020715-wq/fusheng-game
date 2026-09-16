@@ -118,20 +118,34 @@ const ACT_ANIM = {
   book: 'walk', toy: 'jump', snack: 'eat', artist: 'stand', chess: 'sit',
   veg: 'walk', deli: 'eat', carry: 'walk', cure: 'stand', checkup: 'stand',
 };
-const ANIM_CLASSES = ['anim-walk', 'anim-run', 'anim-jump', 'anim-stand', 'anim-sit', 'anim-eat', 'anim-sleep'];
-function actorAnim(name) {
+const ANIM_CLASSES = ['anim-walk', 'anim-run', 'anim-jump', 'anim-stand', 'anim-sit', 'anim-eat', 'anim-sleep', 'anim-startle', 'anim-celebrate', 'anim-trip'];
+const PROP_CLASSES = ['p-rod', 'p-book', 'p-notes', 'p-easel', 'p-steam', 'p-bubble'];
+function actorAnim(name, prop) {
   const a = $('actor');
   if (!a || !a.classList) return;
   a.classList.remove('ps-sit', 'ps-lie');
   if (name === 'sit' || name === 'eat') a.classList.add('ps-sit');
   if (name === 'sleep') a.classList.add('ps-lie');
   ANIM_CLASSES.forEach((c) => a.classList.remove(c));
+  PROP_CLASSES.forEach((c) => a.classList.remove(c));
   a.classList.add('anim-' + name);
+  if (prop) a.classList.add('p-' + prop);
   clearTimeout(actorAnim._t);
   actorAnim._t = setTimeout(() => {
     a.classList.remove('anim-' + name);
     a.classList.remove('ps-sit', 'ps-lie');
+    PROP_CLASSES.forEach((c) => a.classList.remove(c));
   }, name === 'sleep' ? 1500 : 950);
+}
+
+/* 动作 → 手中道具 */
+function propFor(id) {
+  if (id === 'fish') return 'rod';
+  if (id === 'study' || id === 'book') return 'book';
+  if (id === 'art') return S.flags.art === '乐器' ? 'notes' : S.flags.art === '绘画' ? 'easel' : 'book';
+  if (id === 'cook' || id === 'meal') return 'steam';
+  if (id === 'chat') return 'bubble';
+  return null;
 }
 
 /* ---------------- 换场 ---------------- */
@@ -393,10 +407,14 @@ function afterAction() {
 }
 
 /* ---------------- 动作结算 ---------------- */
-function doAction(fn, anim) {
+function doAction(fn, anim, actId) {
   if (eventLock || !S || !S.alive) return;
   Sound.play('scratch');
-  if (anim) actorAnim(anim);
+  if (anim) {
+    let prop = actId ? propFor(actId) : null;
+    if (actId === 'art' && S.flags.art === '武术') { anim = 'jump'; prop = null; }
+    actorAnim(anim, prop);
+  }
   const handled = fn();
   if (S.alive && !handled) advanceSlot();
 }
@@ -1108,11 +1126,14 @@ function openEvent(ev, isMilestone = false) {
   }
 }
 
+let pendingAnim = null; // 事件弹窗关闭后要播的小人动画
+
 function resolveChoice(ev, c, isMilestone) {
   $('event-choices').classList.add('hidden');
   const pass = checkPass(c.check);
   const eff = pass ? c.ok : (c.fail || {});
   applyEffects(eff);
+  pendingAnim = pass ? (eff && eff.mem ? 'celebrate' : null) : (c.fail ? 'trip' : null);
   let txt = pass ? (c.okTxt || (eff && eff.mem ? '……' : '')) : (c.failTxt || '');
   if (!txt) txt = pass ? '（什么事也没有发生。）' : '（失败了。）';
   if (!pass && c.fail && c.fail.mem) txt = c.fail.mem + '\n' + txt;
@@ -1121,6 +1142,7 @@ function resolveChoice(ev, c, isMilestone) {
   $('event-continue').onclick = () => {
     $('modal-event').classList.add('hidden');
     eventLock = false;
+    if (pendingAnim) { const pa = pendingAnim; pendingAnim = null; setTimeout(() => actorAnim(pa), 80); }
     if (!S.alive) return; // 结局流程会接管
     if (isMilestone) { runMilestones(); return; }
     if (ev.final || (isMilestone && ev.final)) return;
@@ -1375,6 +1397,12 @@ function render() {
   const weak = S.needs.精力 < 25 || S.needs.健康 < 30;
   if (weak) actor.classList.add('weak'); else actor.classList.remove('weak');
   if (!weak && S.needs.心情 >= 80) actor.classList.add('happy'); else actor.classList.remove('happy');
+  // 随年龄长大
+  ['age-s', 'age-m', 'age-l'].forEach((c) => actor.classList.remove(c));
+  actor.classList.add(S.age <= 6 ? 'age-s' : S.age <= 12 ? 'age-m' : 'age-l');
+  // 情绪气泡
+  if (S.needs.心情 < 25) actor.classList.add('moodlow'); else actor.classList.remove('moodlow');
+  if (S.buffs.some((b) => b.name === '感冒')) actor.classList.add('sick'); else actor.classList.remove('sick');
   // 地点导航
   const nav = $('locations');
   nav.innerHTML = '';
@@ -1408,7 +1436,7 @@ function render() {
       Sound.play('pop');
       btn.classList.add('clicked');
       setTimeout(() => btn.classList.remove('clicked'), 320);
-      doAction(a.run, ACT_ANIM[a.id] || 'stand');
+      doAction(a.run, ACT_ANIM[a.id] || 'stand', a.id);
     };
     box.appendChild(btn);
   });
@@ -1580,6 +1608,20 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   $('btn-memorial').onclick = () => { renderMemorials(); $('modal-memorial').classList.remove('hidden'); };
   $('btn-memorial-close').onclick = () => $('modal-memorial').classList.add('hidden');
+  // 戳一戳小人
+  const actorEl = $('actor');
+  if (actorEl && actorEl.addEventListener) {
+    actorEl.addEventListener('click', () => {
+      if (!S || !S.alive || eventLock) return;
+      if ($('screen-game').classList.contains('hidden')) return;
+      Sound.play('pop');
+      actorAnim('startle');
+      if (chance(0.35)) {
+        addLog(pick(['你戳了戳自己。疼。', '你冲自己做了个鬼脸，把自己逗笑了。', '你原地蹦了一下，心情莫名好了点。']));
+        render();
+      }
+    });
+  }
 });
 
 /* ============================================================
@@ -1627,11 +1669,19 @@ function renderLifeScroll(cause) {
   });
   // 终点：成年旗 / 早夭花
   html += `<div class="scroll-flag${cause === '夭' ? ' die' : ''}" style="left:${xOf(endAge)}px">${cause === '夭' ? '✿' : '⚑'}</div>`;
-  // 行走的小人
+  // 行走的小人（随年龄长大）
   const walkW = xOf(endAge) - 60;
   const dur = Math.max(2.5, Math.min(14, span * 0.9));
+  const growId = 'walkGrow' + Math.floor(Math.random() * 1e6);
+  const t1 = Math.max(8, Math.min(70, ((7 - startAge) / span) * 100));
+  const t2 = Math.max(t1 + 10, Math.min(90, ((13 - startAge) / span) * 100));
+  if (document.head && document.head.appendChild) {
+    const st = document.createElement('style');
+    st.textContent = `@keyframes ${growId}{0%,${t1}%{transform:scale(.72)}${Math.min(100, t1 + 6)}%,${t2}%{transform:scale(.9)}${Math.min(100, t2 + 6)}%,100%{transform:scale(1.12)}}`;
+    document.head.appendChild(st);
+  }
   html += `<div class="scroll-walker" style="--walk-w:${walkW}px;animation-duration:${dur}s">` +
-    `<svg viewBox="0 0 60 80" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${ACTOR_INNER}</svg></div>`;
+    `<svg viewBox="0 0 60 80" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform-origin:50% 100%;animation:${growId} ${dur}s linear both">${ACTOR_INNER}</svg></div>`;
   box.innerHTML = html;
   // 卷面自动跟随小人的脚步
   if (typeof box.clientWidth === 'number' && innerW > box.clientWidth && 'scrollLeft' in box) {

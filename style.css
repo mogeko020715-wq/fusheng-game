@@ -350,12 +350,13 @@ h3 {
 
 /* ---------- 换场过渡 ---------- */
 #scene-stage.swap-out #scene-art,
-#scene-stage.swap-out #actor { opacity: 0; transform: translateX(-18px); }
+#scene-stage.swap-out #actor { opacity: 0; transform: translateX(-18px) scale(var(--asc, 1)); }
+#scene-stage.swap-out #actor-fx { opacity: 0; }
 #scene-stage.swap-in #scene-art,
 #scene-stage.swap-in #actor { animation: sceneIn .38s ease; }
 @keyframes sceneIn {
-  from { opacity: 0; transform: translateX(18px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateX(18px) scale(var(--asc, 1)); }
+  to   { opacity: 1; transform: translateX(0) scale(var(--asc, 1)); }
 }
 #scene-title { transition: none; }
 #scene-title.pop { animation: titlePop .5s ease; }
@@ -368,9 +369,16 @@ h3 {
 #actor {
   position: absolute; left: 15%; bottom: 6px;
   width: 52px; height: 70px; z-index: 2;
-  pointer-events: none; overflow: visible;
+  pointer-events: auto; cursor: pointer; overflow: visible;
   transition: opacity .25s, transform .25s;
+  --asc: 1;
+  transform: scale(var(--asc));
+  transform-origin: 50% 100%;
 }
+/* 随年龄长大 */
+#actor.age-s { --asc: .72; }
+#actor.age-m { --asc: .9; }
+#actor.age-l { --asc: 1.12; }
 #actor .pose { display: none; }
 #actor .pose-stand { display: block; }
 #actor.ps-sit .pose-stand,
@@ -639,4 +647,91 @@ h3 {
   border-color: var(--accent);
   color: var(--accent);
   background: #fdf3ef;
+}
+
+/* ---------- 小人道具（按动作显示） ---------- */
+#actor .prop { display: none; }
+#actor.p-rod .prop-rod,
+#actor.p-book .prop-book,
+#actor.p-notes .prop-notes,
+#actor.p-easel .prop-easel,
+#actor.p-steam .prop-steam,
+#actor.p-bubble .prop-bubble { display: block; }
+
+/* ---------- 新动作：吓一跳 / 庆祝 / 摔倒 ---------- */
+#actor.anim-startle .whole { animation: startleJump .55s ease; }
+@keyframes startleJump {
+  0%   { transform: translateY(0) rotate(0); }
+  25%  { transform: translateY(-9px) rotate(-7deg); }
+  50%  { transform: translateY(0) rotate(0); }
+  75%  { transform: translateY(-4px) rotate(5deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
+#actor.anim-celebrate .whole { animation: celebrateSpin 1s ease; }
+@keyframes celebrateSpin {
+  0%   { transform: translateY(0) rotate(0); }
+  35%  { transform: translateY(-14px) rotate(180deg); }
+  70%  { transform: translateY(0) rotate(360deg); }
+  85%  { transform: translateY(-5px) rotate(360deg); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+#actor.anim-trip .whole { animation: tripFall .95s ease; }
+@keyframes tripFall {
+  0%   { transform: rotate(0); }
+  30%  { transform: rotate(74deg) translate(3px, 4px); }
+  55%  { transform: rotate(74deg) translate(3px, 4px); }
+  82%  { transform: rotate(-7deg); }
+  100% { transform: rotate(0); }
+}
+
+/* ---------- 情绪气泡与庆祝星星（actor 的兄弟覆盖层） ---------- */
+#actor-fx {
+  position: absolute; left: 15%; bottom: 6px;
+  width: 52px; height: 70px; z-index: 3;
+  pointer-events: none;
+  transform: scale(var(--asc, 1));
+  transform-origin: 50% 100%;
+  transition: opacity .25s;
+}
+#actor-fx .mb, #actor-fx .star {
+  display: none;
+  position: absolute;
+  font-size: 13px; font-weight: bold; color: var(--ink);
+  text-shadow: 0 1px 0 var(--paper), 1px 0 0 var(--paper);
+}
+#actor.happy ~ #actor-fx .mb-happy1 {
+  display: block; right: -4px; top: -6px;
+  animation: bubbleFloat 2.2s ease-in-out infinite;
+}
+#actor.happy ~ #actor-fx .mb-happy2 {
+  display: block; right: -12px; top: 4px; font-size: 11px;
+  animation: bubbleFloat 2.2s ease-in-out -1.1s infinite;
+}
+#actor.moodlow ~ #actor-fx .mb-low {
+  display: block; right: -6px; top: -8px; color: var(--gray);
+  animation: bubbleFloat 3s ease-in-out infinite;
+}
+#actor.sick ~ #actor-fx .mb-sick {
+  display: block; right: -8px; top: -4px; color: var(--accent);
+  animation: sneezeShake 2.4s ease-in-out infinite;
+}
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0); opacity: .95; }
+  50%      { transform: translateY(-5px); opacity: .45; }
+}
+@keyframes sneezeShake {
+  0%, 78%, 100% { transform: translateX(0) rotate(0); opacity: .9; }
+  84% { transform: translateX(-2px) rotate(-14deg); }
+  90% { transform: translateX(2px) rotate(12deg); }
+  96% { transform: translateX(-1px) rotate(-6deg); }
+}
+#actor-fx .star { color: var(--accent); font-size: 12px; }
+#actor.anim-celebrate ~ #actor-fx .star { display: block; animation: starBurst 1s ease-out forwards; }
+#actor-fx .st1 { left: -6px; top: 20px; }
+#actor-fx .st2 { left: 22px; top: -12px; animation-delay: .12s; }
+#actor-fx .st3 { right: -8px; top: 22px; animation-delay: .22s; }
+@keyframes starBurst {
+  0%   { transform: translateY(6px) scale(.4); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateY(-16px) scale(1.2); opacity: 0; }
 }

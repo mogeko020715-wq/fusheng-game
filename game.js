@@ -266,6 +266,7 @@ const ALL_TAGS = {
   '知寒知暖': '贫寒之家暗线：焐热过妈妈的手，也读懂了它',
   '灯火可亲': '小康之家暗线：看懂了饭桌规矩与自行车后座的爱',
   '锦衣知暖': '富贵之家暗线：等到了那顿推掉应酬的生日饭',
+  '莫逆之交': '走完一世的羁绊约定',
 };
 function computeTags(cause) {
   const tags = [];
@@ -285,6 +286,7 @@ function computeTags(cause) {
   if (S.flags.arcDone === 'poor') tags.push('知寒知暖');
   if (S.flags.arcDone === 'middle') tags.push('灯火可亲');
   if (S.flags.arcDone === 'rich') tags.push('锦衣知暖');
+  if (S.flags.bondDone) tags.push('莫逆之交');
   return tags;
 }
 
@@ -308,7 +310,8 @@ function newLife() {
     money: rand(0, 5),
     skills: {},            // { 烹饪: {xp, lvl} }
     buffs: [],             // { name, desc, slots, gainMul, energyMul }
-    flags: { wentSchool: false, skipped: 0, intro: false, dream: null },
+    flags: { wentSchool: false, skipped: 0, intro: false, dream: null,
+             bond: pick(['pang', 'transfer', 'sis', 'chess']) },
     location: 'home',
     memories: [],          // 大事记
     eventCooldown: 0,
@@ -965,6 +968,154 @@ const EVENTS = [
       { t: '明天带双倍的钱，把排场找回来', ok: { money: -10, 心情: 3 }, okTxt: '第二天你又成了人群的中心。可你总觉得，这些笑脸有点吵。' },
     ],
   },
+
+  /* ============================================================
+   * 一生一羁绊：每世随机一位命定之人，相识 → 深交 → 告别/约定
+   * ============================================================ */
+
+  /* ---- 同桌小胖 ---- */
+  {
+    id: 'bond-pang-1', title: '桌上的三八线', min: 6, max: 8, weight: 3,
+    cond: (s) => s.flags.bond === 'pang' && !s.flags['seen:bond-pang-1'],
+    text: '开学排座位，你和班里最圆的小胖同桌。课桌中间不知谁先画了一道三八线，可小胖的胳膊肘总是过界，霸占你半块橡皮的地盘。',
+    choices: [
+      { t: '把线擦了：「桌子一人一半。」', ok: { 心情: 6, 魅力: 1, flag: { bondA1: true }, mem: '你擦掉三八线那天，小胖分了你半根辣条。友谊是从半根辣条开始的。' }, okTxt: '小胖愣了半天，从书包最里层摸出一根辣条，撕成两半。\n大的那半给了你。' },
+      { t: '拿尺子敲他的胳膊肘', ok: { 心情: 2 }, okTxt: '小胖嗷嗷叫，下课就去告了老师。你们冷战了三天，又莫名其妙和好了。' },
+    ],
+  },
+  {
+    id: 'bond-pang-2', title: '小胖的饭盒', min: 11, max: 13, weight: 3,
+    cond: (s) => s.flags.bond === 'pang' && !s.flags['seen:bond-pang-2'],
+    text: '这几年你发现一个秘密：小胖的饭盒里，红烧肉永远比别人的多一份。今天他支支吾吾坦白——是他妈妈特意多做的，「我妈说，同桌要一起长肉。」',
+    choices: [
+      { t: '明天开始，你的饭盒也分他一半', ok: { 心情: 8, 魅力: 1.5, flag: { bondA2: true }, mem: '你们的饭盒从此不分彼此。两个半大小子，一起长了好多斤。' }, okTxt: '第二天你把自己饭盒推过去的时候，小胖眼睛亮得像灯泡。\n「咱俩天下第一好！」' },
+      { t: '白吃就白吃，笑嘻嘻', ok: { 心情: 4, 饱食: 8 }, okTxt: '你吃得很香。小胖也不介意，只是帮你把肥肉都挑走了——他说你不爱吃肥的。' },
+    ],
+  },
+  {
+    id: 'bond-pang-3a', title: '毕业前的约定', min: 15, max: 17, weight: 5,
+    cond: (s) => s.flags.bond === 'pang' && s.flags.bondA1 && s.flags.bondA2 && !s.flags.bondDone && !s.flags['seen:bond-pang-3a'],
+    text: '晚自习后，小胖请你吃烤串，吃到一半忽然说：「我想好了，以后我要开一家饭馆。\n你答应我，等你以后出息了，也得回来吃。我给你留靠窗的座，终身免费。」',
+    choices: [
+      { t: '碰杯：「一言为定。」', ok: { 心情: 12, flag: { bondDone: true }, mem: '毕业前你和小胖约好了：他开饭馆，你终身免费，靠窗的座。' }, okTxt: '两瓶汽水碰在一起，泡沫溅了满脸。\n很多年后你才明白，人这一辈子，能有一个「终身免费」的朋友，是多大的福气。' },
+    ],
+  },
+  {
+    id: 'bond-pang-3b', title: '渐渐安静的同桌', min: 15, max: 17, weight: 2,
+    cond: (s) => s.flags.bond === 'pang' && !(s.flags.bondA1 && s.flags.bondA2) && !s.flags.bondDone && !s.flags['seen:bond-pang-3b'],
+    text: '毕业照拍完那天，小胖塞给你一包辣条，还是撕成两半的那种。\n你们谁都没提"以后"两个字。有些事就是这样，不知道怎么的，就慢慢断了。',
+    choices: [
+      { t: '收下，说声保重', ok: { 心情: -3, mem: '毕业时小胖给了你一包辣条。后来你们渐渐断了联系。' }, okTxt: '辣条你吃了很多年。\n每次撕开，都会想起那张圆圆的脸。' },
+    ],
+  },
+
+  /* ---- 巷尾转学生 ---- */
+  {
+    id: 'bond-transfer-1', title: '巷尾的新面孔', min: 5, max: 7, weight: 3,
+    cond: (s) => s.flags.bond === 'transfer' && !s.flags['seen:bond-transfer-1'],
+    text: '巷尾的空房子里搬来一户人家。他们家的小孩总是一个人蹲在墙根玩石子，玩得特别认真，好像全世界只剩他和那几颗石子。',
+    choices: [
+      { t: '蹲过去：「这局算我一个。」', ok: { 心情: 6, 魅力: 1, flag: { bondA1: true }, mem: '你用一局石子游戏，捡到了巷尾转学生的友谊。' }, okTxt: '他抬起头看了你很久，往旁边挪了挪，给你让出半个墙根。\n那天你们玩到天黑，谁都没怎么说话，但明天他还会在墙根等你。' },
+      { t: '看一眼，走自己的路', ok: { 心情: 1 }, okTxt: '你们擦肩而过。巷子很长，各走各的。' },
+    ],
+  },
+  {
+    id: 'bond-transfer-2', title: '秘密基地', min: 10, max: 12, weight: 3,
+    cond: (s) => s.flags.bond === 'transfer' && !s.flags['seen:bond-transfer-2'],
+    text: '转学生神神秘秘地拉你穿过三条巷子，扒开一堵废墙后的野藤——里面竟然藏着一小片干净的空地，有他捡来的木板凳、铁皮盒，还有半本翻烂了的《水浒传》。\n「这是咱俩的秘密基地。」他第一次用了「咱俩」这个词。',
+    choices: [
+      { t: '拉钩：谁也不告诉', ok: { 心情: 8, 智力: 1, flag: { bondA2: true }, mem: '废墙后的秘密基地，是你们俩的王国。拉过钩的，谁也不告诉。' }, okTxt: '你们把那半本《水浒传》读完了一遍又一遍。\n后来你所有关于「江湖」的想象，都带着那片空地上的阳光。' },
+      { t: '第二天就讲给了班里同学听', ok: { 心情: -4, 魅力: -1 }, okTxt: '第三天你再去，野藤还是那丛野藤，木板凳和铁皮盒都不见了。\n他再也没提过「咱俩」。' },
+    ],
+  },
+  {
+    id: 'bond-transfer-3a', title: '时间胶囊', min: 15, max: 17, weight: 5,
+    cond: (s) => s.flags.bond === 'transfer' && s.flags.bondA1 && s.flags.bondA2 && !s.flags.bondDone && !s.flags['seen:bond-transfer-3a'],
+    text: '转学生又要转学了——他爸的工作又调动了。\n临走前一晚，你们回到秘密基地，把各自写的一封信装进铁皮盒，埋在那棵歪脖子树下。\n「十年之后，不管在哪，都回来挖。」',
+    choices: [
+      { t: '埋下盒子，约好十年', ok: { 心情: 10, flag: { bondDone: true }, mem: '你们把十年之约埋进了歪脖子树下。铁皮盒里有两封信。' }, okTxt: '他走的那天你没去送，怕当面哭鼻子丢人。\n但你知道，有些东西埋在土里，比带在身上更牢靠。' },
+    ],
+  },
+  {
+    id: 'bond-transfer-3b', title: '空了的巷尾', min: 15, max: 17, weight: 2,
+    cond: (s) => s.flags.bond === 'transfer' && !(s.flags.bondA1 && s.flags.bondA2) && !s.flags.bondDone && !s.flags['seen:bond-transfer-3b'],
+    text: '不知什么时候开始，巷尾又空了。那户人家的窗户黑洞洞的，像从来没住过人。\n你甚至想不起来，是从哪一天起，墙根下再没有那个玩石子的身影。',
+    choices: [
+      { t: '在墙根站一会儿再走', ok: { 心情: -3, mem: '转学生悄无声息地走了。巷尾空了很久。' }, okTxt: '风穿过巷子，卷起几片落叶。\n有些人走进你的生命，又退出去，连一声再见都省了。' },
+    ],
+  },
+
+  /* ---- 隔壁姐姐 ---- */
+  {
+    id: 'bond-sis-1', title: '会飞的纸飞机', min: 4, max: 6, weight: 3,
+    cond: (s) => s.flags.bond === 'sis' && !s.flags['seen:bond-sis-1'],
+    text: '隔壁住着一位大你五岁的姐姐。傍晚她坐在楼道口折纸飞机，折出来的飞机又稳又远，能飞过整个院子。\n你蹲在旁边看了很久很久。她笑着把最后一张糖纸递给你：「教你？」',
+    choices: [
+      { t: '学会后，把飞得最远的那架送给她', ok: { 心情: 6, 魅力: 1, flag: { bondA1: true }, mem: '你学会折纸飞机那天，把飞得最远的一架送给了隔壁姐姐。' }, okTxt: '她把那架纸飞机夹进了课本里。\n「姐姐上学带着它，考试就不紧张了。」' },
+      { t: '学会了就自己玩个够', ok: { 娱乐: 8 }, okTxt: '你的纸飞机挂满了院子里的树梢。她远远看着，笑而不语。' },
+    ],
+  },
+  {
+    id: 'bond-sis-2', title: '姐姐的自行车', min: 11, max: 13, weight: 3,
+    cond: (s) => s.flags.bond === 'sis' && !s.flags['seen:bond-sis-2'],
+    text: '姐姐考上外地的大学了。临走前那个暑假，她天天傍晚在院子里扶着你练自行车：「我走了就没人陪你练了，这个夏天必须学会。」\n你摔了无数次，她一次都没嫌烦。',
+    choices: [
+      { t: '开学前，骑完一整条巷子给她看', ok: { 体质: 2, 心情: 8, flag: { bondA2: true }, mem: '姐姐去上大学前，你终于骑完了一整条巷子。她在巷子那头鼓掌。' }, okTxt: '你摇摇晃晃骑到巷子那头，她鼓掌鼓得整条街都听见了。\n「以后想我了，就骑车骑快一点，风会把想念吹淡的。」' },
+      { t: '怕摔，不想学了', ok: { 心情: -2 }, okTxt: '她走的那天，自行车靠墙放着，落了很薄一层灰。' },
+    ],
+  },
+  {
+    id: 'bond-sis-3a', title: '远方来的信', min: 15, max: 17, weight: 5,
+    cond: (s) => s.flags.bond === 'sis' && s.flags.bondA1 && s.flags.bondA2 && !s.flags.bondDone && !s.flags['seen:bond-sis-3a'],
+    text: '信箱里躺着一封信，是姐姐从大学寄来的。信里夹着那架纸飞机——已经压得平平整整，颜色都旧了。\n「飞机还你。它陪了我四年，现在我把它寄回去，换你给我讲讲家里的事。常写信。」',
+    choices: [
+      { t: '提笔回信，从此月月不断', ok: { 心情: 10, 智力: 1, flag: { bondDone: true }, mem: '姐姐寄回了那架纸飞机。你们的信，从此月月不断。' }, okTxt: '你的第一封信写了四页，从巷口的猫写到月考成绩。\n原来有些人搬走了，却可以住在一封信里，一直不走。' },
+    ],
+  },
+  {
+    id: 'bond-sis-3b', title: '安静的楼道', min: 15, max: 17, weight: 2,
+    cond: (s) => s.flags.bond === 'sis' && !(s.flags.bondA1 && s.flags.bondA2) && !s.flags.bondDone && !s.flags['seen:bond-sis-3b'],
+    text: '过年时隔壁偶尔会有动静，是姐姐回来了。你们在楼道里碰见，客气地点头，像两个刚搬来的邻居。\n你忽然想起，已经很多年没听过她折纸飞机的声音了。',
+    choices: [
+      { t: '点点头，擦肩而过', ok: { 心情: -3, mem: '隔壁姐姐成了点头之交。楼道安静了很多年。' }, okTxt: '长大大概就是这样：不是吵架，不是告别，\n只是某天你发现，你们已经没什么好说的了。' },
+    ],
+  },
+
+  /* ---- 棋摊忘年交 ---- */
+  {
+    id: 'bond-chess-1', title: '让你三子', min: 6, max: 8, weight: 3,
+    cond: (s) => s.flags.bond === 'chess' && !s.flags['seen:bond-chess-1'],
+    text: '广场棋摊上，一位白胡子老爷子冲你招手：「小娃娃，来一盘？我让你三个子。」\n你本来只是看热闹的，不知怎么就被按到了棋凳上。',
+    choices: [
+      { t: '输了也常来，陪他杀两盘', ok: { 智力: 1.5, 心情: 5, flag: { bondA1: true }, mem: '你成了棋摊的常客。白胡子老爷子让你三子，你输了整整一个夏天。' }, okTxt: '输了一个夏天之后，老爷子捋着胡子说：「能一直输还一直来的，你是头一个。\n行，我好好教。」' },
+      { t: '赢了一局就得意地跑了', ok: { 心情: 4 }, okTxt: '老爷子在你背后笑：「让你三个子呢，小娃娃。」你跑得更快了。' },
+    ],
+  },
+  {
+    id: 'bond-chess-2', title: '老爷子的心事', min: 11, max: 13, weight: 3,
+    cond: (s) => s.flags.bond === 'chess' && !s.flags['seen:bond-chess-2'],
+    text: '连着下了几年棋，老爷子今天格外沉默。收摊时他忽然说：「我儿子跟你差不多大的时候，也天天在这儿下棋。后来出去了，十年没回来喽。」\n夕阳把他的影子拉得很长。',
+    choices: [
+      { t: '默默陪他坐到路灯亮', ok: { 心情: 7, 魅力: 1, flag: { bondA2: true }, mem: '老爷子说起他十年没回家的儿子。那天你陪他坐到了路灯亮。' }, okTxt: '路灯亮起来的时候，老爷子收拾棋盘的手停了一下：\n「以后他回来了，我介绍你们认识。你们俩，下棋一样臭。」' },
+      { t: '不知道怎么接话，先回家了', ok: { 心情: -2 }, okTxt: '你走出很远回头看了一眼，老爷子还坐在那儿，一个人，一盘棋。' },
+    ],
+  },
+  {
+    id: 'bond-chess-3a', title: '最后一盘棋', min: 15, max: 17, weight: 5,
+    cond: (s) => s.flags.bond === 'chess' && s.flags.bondA1 && s.flags.bondA2 && !s.flags.bondDone && !s.flags['seen:bond-chess-3a'],
+    text: '广场要改造了，棋摊最后一天出摊。老爷子特意等你放学，摆好棋：「来，最后一盘。今天不让子了。」\n他顿了顿：「你要赢了，这副老棋盘就归你。」\n那盘棋下了很久，很久。',
+    choices: [
+      { t: '收下棋盘：「老爷子，后会有期。」', ok: { 心情: 10, 智力: 1.5, flag: { bondDone: true }, mem: '棋摊拆了。老爷子把那副旧棋盘送给了你，彩头是你赢的最后一盘。' }, okTxt: '「下棋如做人，落子无悔。」他拍拍你的肩膀，背着手走进了人群。\n那副棋盘你收了很多年，一直没舍得再下。' },
+    ],
+  },
+  {
+    id: 'bond-chess-3b', title: '换了人的棋摊', min: 15, max: 17, weight: 2,
+    cond: (s) => s.flags.bond === 'chess' && !(s.flags.bondA1 && s.flags.bondA2) && !s.flags.bondDone && !s.flags['seen:bond-chess-3b'],
+    text: '有些日子没去广场，再去时棋摊还在，摊主却换了人。\n你问了句白胡子老爷子，新摊主摆摆手：「回老家抱孙子去喽。」棋还是那些棋，可看棋的心情不一样了。',
+    choices: [
+      { t: '在棋摊边站一会儿', ok: { 心情: -3, mem: '白胡子老爷子回老家了。棋摊换了人，你再没去看过棋。' }, okTxt: '原来「改天再来」是最靠不住的四个字。\n改天，常常就是再也不见。' },
+    ],
+  },
 ];
 
 /* ---------------- 里程碑事件 ---------------- */
@@ -1087,12 +1238,36 @@ function checkFamilyArc() {
   });
 }
 
+/* ---------------- 羁绊保底调度 ---------------- */
+function checkBondArc() {
+  const b = S.flags.bond;
+  if (!b) return;
+  const steps = [
+    { age: 6, id: `bond-${b}-1` },
+    { age: 11, id: `bond-${b}-2` },
+    { age: 16, a: `bond-${b}-3a`, b: `bond-${b}-3b` },
+  ];
+  steps.forEach((st) => {
+    if (S.age < st.age) return;
+    if (st.a) {
+      if (S.flags['seen:' + st.a] || S.flags['seen:' + st.b]) return;
+      const ok = S.flags.bondA1 && S.flags.bondA2;
+      const ev = EVENTS.find((e) => e.id === (ok ? st.a : st.b));
+      if (ev) milestoneQueue.push(ev);
+    } else if (!S.flags['seen:' + st.id]) {
+      const ev = EVENTS.find((e) => e.id === st.id);
+      if (ev) milestoneQueue.push(ev);
+    }
+  });
+}
+
 let milestoneQueue = [];
 
 function checkMilestones() {
   const m = MILESTONES[S.age];
   if (m) milestoneQueue.push(m);
   checkFamilyArc();
+  checkBondArc();
 }
 
 function runMilestones() {

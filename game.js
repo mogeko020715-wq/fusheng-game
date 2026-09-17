@@ -173,6 +173,25 @@ function propFor(id) {
   return null;
 }
 
+/* ---------------- 小人走位：行动时走到场景对应位置（占舞台宽度的 %） ---------------- */
+const ACTOR_HOME_X = 15;
+const ACTOR_SPOT = {
+  home:     { sleep: 48, meal: 46, wash: 30, play: 34, study: 52, exercise: 22, chore: 40, art: 56, cook: 47, chat: 43 },
+  park:     { walk: 46, slide: 32, fish: 68, watch: 54 },
+  school:   { class: 50, skip: 22, club: 52 },
+  square:   { book: 40, toy: 44, snack: 42, artist: 62, chess: 34 },
+  market:   { veg: 48, deli: 62, carry: 38 },
+  hospital: { cure: 52, checkup: 46 },
+};
+function actorGo(actId) {
+  const spot = actId && S && ACTOR_SPOT[S.location] ? ACTOR_SPOT[S.location][actId] : null;
+  const left = (spot != null ? spot : ACTOR_HOME_X) + '%';
+  ['actor', 'actor-fx'].forEach((id) => {
+    const el = $(id);
+    if (el && el.style) el.style.left = left;
+  });
+}
+
 /* ---------------- 换场 ---------------- */
 function switchLocation(id) {
   if (eventLock || !S || !S.alive || id === S.location) return;
@@ -444,6 +463,7 @@ function afterAction() {
 function doAction(fn, anim, actId) {
   if (eventLock || !S || !S.alive) return;
   Sound.play('scratch');
+  actorGo(actId);
   if (anim) {
     let prop = actId ? propFor(actId) : null;
     if (actId === 'art' && S.flags.art === '武术') { anim = 'jump'; prop = null; }
@@ -1440,6 +1460,39 @@ function resolveChoice(ev, c, isMilestone) {
  * ============================================================ */
 /* 每个场景三层：far 远景天际线（淡墨）· mid 主体建筑 · near 前景小物（浓一点）
  * 三层随鼠标视差移动；.win 夜晚亮灯；.lamp-dot/.lamp-halo 傍晚起亮 */
+/* 三种家境的家：贫寒漏风平房（屋顶低歪、补丁、关不严的门、墙缝）
+ * 小康坡顶小屋 · 富贵大屋檐四合院（飞檐、灯笼、窗棂） */
+const HOME_MID = {
+  poor: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 62 L108 32 L174 56"/>
+      <path d="M120 44 l16 -5 7 11 -16 5 z"/>
+      <path d="M58 62 L56 102 M168 56 L172 102 M54 102 H174"/>
+      <path d="M100 76 L98 102 M100 76 L122 74 L126 102"/>
+      <rect class="win" x="66" y="70" width="16" height="14"/>
+      <path d="M140 68 l4 8 -3 8 5 10" stroke-width="1.8"/>
+      <path d="M15 102 H205"/></svg>`,
+  middle: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30 60 L110 18 L190 60"/>
+      <rect x="142" y="22" width="10" height="20"/>
+      <circle cx="147" cy="18" r="3"><animate attributeName="cy" values="20;4" dur="3.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.75;0" dur="3.4s" repeatCount="indefinite"/></circle>
+      <circle cx="148" cy="18" r="2.2"><animate attributeName="cy" values="20;2" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.6;0" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/></circle>
+      <rect x="48" y="60" width="124" height="42"/>
+      <rect x="96" y="74" width="26" height="28"/><rect class="win" x="60" y="70" width="18" height="16"/><rect class="win" x="144" y="70" width="18" height="16"/>
+      <path d="M15 102 H205"/></svg>`,
+  rich: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 58 L110 20 L196 58"/>
+      <path d="M24 58 q-7 1 -10 9 M196 58 q7 1 10 9"/>
+      <rect x="42" y="58" width="136" height="44"/>
+      <rect x="96" y="72" width="28" height="30"/><path d="M90 72 h40"/>
+      <rect class="win" x="56" y="68" width="18" height="16"/><path d="M65 68 v16 M56 76 h18" stroke-width="1.5"/>
+      <rect class="win" x="146" y="68" width="18" height="16"/><path d="M155 68 v16 M146 76 h18" stroke-width="1.5"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-4 84 58; 4 84 58; -4 84 58" dur="3.6s" repeatCount="indefinite"/>
+        <path d="M84 58 v5"/><circle cx="84" cy="67" r="4.5"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="4 136 58; -4 136 58; 4 136 58" dur="4.1s" repeatCount="indefinite"/>
+        <path d="M136 58 v5"/><circle cx="136" cy="67" r="4.5"/></g>
+      <path d="M15 102 H205"/></svg>`,
+};
+
 const ART = {
   home: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1448,14 +1501,7 @@ const ART = {
       <g><animateTransform attributeName="transform" type="translate" values="0 0;16 0;0 0" dur="22s" repeatCount="indefinite"/>
         <path d="M96 22 q7 -7 14 0 q8 -5 13 2"/></g>
     </svg>`,
-    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M30 60 L110 18 L190 60"/>
-      <rect x="142" y="22" width="10" height="20"/>
-      <circle cx="147" cy="18" r="3"><animate attributeName="cy" values="20;4" dur="3.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.75;0" dur="3.4s" repeatCount="indefinite"/></circle>
-      <circle cx="148" cy="18" r="2.2"><animate attributeName="cy" values="20;2" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.6;0" dur="3.4s" begin="-1.7s" repeatCount="indefinite"/></circle>
-      <rect x="48" y="60" width="124" height="42"/>
-      <rect x="96" y="74" width="26" height="28"/><rect class="win" x="60" y="70" width="18" height="16"/><rect class="win" x="144" y="70" width="18" height="16"/>
-      <path d="M15 102 H205"/></svg>`,
+    mid: () => HOME_MID[S.familyKey] || HOME_MID.middle,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 102 V54 M12 57 H64"/>
       <g><animateTransform attributeName="transform" type="rotate" values="-3 28 57; 3 28 57; -3 28 57" dur="3.8s" repeatCount="indefinite"/>
@@ -1810,6 +1856,8 @@ function render() {
   $('ui-dream').innerHTML = S.flags.dream
     ? `<span class="tag dream-tag" title="心愿：${DREAMS[S.flags.dream].name}">心愿 · ${DREAMS[S.flags.dream].name}</span>`
     : '<span class="dim">八岁那年，会有答案</span>';
+  // 换了地点，小人回到默认站位
+  if (render._loc !== S.location) { render._loc = S.location; actorGo(null); }
   // 小人精神状态
   const actor = $('actor');
   const weak = S.needs.精力 < 25 || S.needs.健康 < 30;
@@ -1836,9 +1884,10 @@ function render() {
   });
   // 场景（三层：远 / 中 / 近，随鼠标视差）
   const art = ART[S.location];
+  const midArt = typeof art.mid === 'function' ? art.mid() : art.mid;
   $('scene-art').innerHTML =
     `<div class="lyr lyr-far">${art.far}</div>` +
-    `<div class="lyr lyr-mid">${art.mid}</div>` +
+    `<div class="lyr lyr-mid">${midArt}</div>` +
     `<div class="lyr lyr-near">${art.near}</div>`;
   $('scene-title').textContent = S.location === 'school' ? schoolTitle() : SCENES[S.location].title;
   $('scene-desc').textContent = SCENES[S.location].desc();
@@ -1855,6 +1904,7 @@ function render() {
     btn.innerHTML = (a.cost ? `${label} <span class="cost ${S.money < a.cost ? 'no' : ''}">¥${a.cost}</span>` : label) +
       (n <= 9 ? `<span class="kbd">${n}</span>` : '');
     btn.onclick = () => {
+      if (btn._lp) { btn._lp = false; return; }   // 长按预览后不触发行动
       Sound.play('pop');
       btn.classList.add('clicked');
       setTimeout(() => btn.classList.remove('clicked'), 320);
@@ -1868,12 +1918,36 @@ function render() {
       btn.addEventListener('mouseleave', clearHints);
       btn.addEventListener('focus', show);
       btn.addEventListener('blur', clearHints);
+      // 触屏没有悬停：长按 0.32s 出预览，松手消失且不执行行动
+      let lpTimer = null, lpFired = false;
+      btn.addEventListener('touchstart', () => {
+        lpFired = false;
+        lpTimer = setTimeout(() => { lpFired = true; show(); }, 320);
+      }, { passive: true });
+      btn.addEventListener('touchend', () => {
+        clearTimeout(lpTimer);
+        if (lpFired) { btn._lp = true; setTimeout(() => { btn._lp = false; }, 600); }
+        setTimeout(clearHints, 500);
+      });
+      btn.addEventListener('touchcancel', () => { clearTimeout(lpTimer); clearHints(); });
     }
     box.appendChild(btn);
   });
   // 日志
   $('log').innerHTML = S.log.map((l) =>
     `<p class="${l.cls || ''}">【${l.age}岁·${l.day}日】${l.text}</p>`).join('');
+  // 移动端：最新一条日志做成字幕条（S.log 新的在前）
+  const ticker = $('log-ticker');
+  if (ticker) {
+    const latest = S.log[0];
+    ticker.textContent = latest ? latest.text : '';
+    ticker.classList.remove('tick-in');
+    void ticker.offsetWidth;
+    ticker.classList.add('tick-in');
+  }
+  // 移动端：资质折叠摘要
+  const atg = $('attrs-toggle');
+  if (atg) atg.textContent = `资质 · 体 ${Math.round(S.attrs.体质)} · 智 ${Math.round(S.attrs.智力)} · 魅 ${Math.round(S.attrs.魅力)} ▾`;
   // 数值飘字
   flushFx();
 }
@@ -2135,6 +2209,42 @@ window.addEventListener('DOMContentLoaded', () => {
         const el = stageEl.querySelector(sel);
         if (el && el.style) el.style.transform = '';
       });
+    });
+  }
+  // 触屏：场景上左右滑动切换地点（对齐桌面端 ← →）
+  if (stageEl && stageEl.addEventListener) {
+    let touchX = null;
+    stageEl.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length) touchX = e.touches[0].clientX;
+    }, { passive: true });
+    stageEl.addEventListener('touchend', (e) => {
+      if (touchX == null || !e.changedTouches || !e.changedTouches.length) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      touchX = null;
+      if (Math.abs(dx) < 48) return;
+      if (!S || !S.alive || eventLock) return;
+      if (!$('modal-event').classList.contains('hidden')) return;
+      cycleLoc(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+  // 移动端：字幕条点开岁月底栏
+  const tickerEl = $('log-ticker');
+  if (tickerEl && tickerEl.addEventListener) {
+    tickerEl.addEventListener('click', () => {
+      const body = $('sheet-log-body');
+      if (body) body.innerHTML = $('log').innerHTML;
+      $('sheet-log').classList.remove('hidden');
+    });
+    const closeSheet = () => $('sheet-log').classList.add('hidden');
+    $('sheet-log-close').addEventListener('click', closeSheet);
+    $('sheet-log').addEventListener('click', (e) => { if (e.target === $('sheet-log')) closeSheet(); });
+  }
+  // 移动端：资质栏折叠开关
+  const atgEl = $('attrs-toggle');
+  if (atgEl && atgEl.addEventListener) {
+    atgEl.addEventListener('click', () => {
+      const pl = $('panel-left');
+      if (pl && pl.classList && pl.classList.toggle) pl.classList.toggle('open');
     });
   }
 });

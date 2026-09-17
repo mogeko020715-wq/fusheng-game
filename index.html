@@ -59,6 +59,8 @@
 
     <!-- 左栏：属性 -->
     <aside id="panel-left" class="sketch-box">
+      <button id="attrs-toggle" type="button"></button>
+      <div id="attrs-body">
       <h3>资质</h3>
       <div class="attr-row" title="体质 —— 影响运动锻炼的收益、疾病抵抗与体力检定"><span class="attr-name">体质</span><div class="bar"><div id="bar-体质" class="bar-fill"></div></div><span id="num-体质" class="attr-num">50</span></div>
       <div class="attr-row" title="智力 —— 影响看书与上课的收益、学业与智力检定"><span class="attr-name">智力</span><div class="bar"><div id="bar-智力" class="bar-fill"></div></div><span id="num-智力" class="attr-num">50</span></div>
@@ -73,6 +75,7 @@
       <div id="ui-skills" class="tag-list"><span class="dim">尚无</span></div>
       <h3>状态</h3>
       <div id="ui-buffs" class="tag-list"><span class="dim">平常</span></div>
+      </div>
     </aside>
 
     <!-- 中栏：场景 -->
@@ -158,6 +161,7 @@
       </div>
       <div id="scene-title"></div>
       <div id="scene-desc"></div>
+      <div id="log-ticker" title="点开岁月"></div>
       <div id="actions"></div>
     </section>
 
@@ -208,6 +212,14 @@
 </div>
 
 <footer id="page-foot">浮生 · 众生一梦 —— 灵感源自边境游戏工作室《众生》(The Lives)。原作已停更，愿众生安好。</footer>
+
+<!-- ============ 移动端：岁月底部面板 ============ -->
+<div id="sheet-log" class="hidden">
+  <div class="sheet-panel">
+    <div class="sheet-head"><span>岁 月</span><button id="sheet-log-close" class="sheet-close">合上</button></div>
+    <div id="sheet-log-body"></div>
+  </div>
+</div>
 
 <div id="fx-layer"></div>
 <script src="game.js"></script>

@@ -267,6 +267,7 @@ const ALL_TAGS = {
   '灯火可亲': '小康之家暗线：看懂了饭桌规矩与自行车后座的爱',
   '锦衣知暖': '富贵之家暗线：等到了那顿推掉应酬的生日饭',
   '莫逆之交': '走完一世的羁绊约定',
+  '年少欢喜': '把那段懵懂心事，走成了约定',
 };
 function computeTags(cause) {
   const tags = [];
@@ -287,6 +288,7 @@ function computeTags(cause) {
   if (S.flags.arcDone === 'middle') tags.push('灯火可亲');
   if (S.flags.arcDone === 'rich') tags.push('锦衣知暖');
   if (S.flags.bondDone) tags.push('莫逆之交');
+  if (S.flags.crushDone) tags.push('年少欢喜');
   return tags;
 }
 
@@ -784,14 +786,6 @@ const EVENTS = [
     ],
   },
   {
-    id: 'first-love', title: '一封没送出的信', min: 13, max: 17,
-    text: '你写了一封信，改了十几遍，信封上的名字是你最不敢对视的那个人。信就在书包里，揉得起了毛边。',
-    choices: [
-      { t: '塞进对方的课桌（魅力检定）', check: { attr: '魅力', dc: 65 }, ok: { 魅力: 2, 心情: 12, mem: '那封信有了回音。多年后想起，你还会心跳加速。' }, fail: { 心情: -8 }, failTxt: '信被原封不动退了回来，附言只有两个字：「好好学习。」' },
-      { t: '把信烧了', ok: { 心情: -3, mem: '你烧掉了那封信。火苗窜起来的时候，你觉得有什么也随之烧掉了，又有什么留了下来。' } },
-    ],
-  },
-  {
     id: 'volunteer', title: '敬老院献爱心', min: 8, max: 16,
     cond: (s) => s.flags.wentSchool,
     text: '学校组织去敬老院献爱心。教室里嗡嗡的，有人兴奋，有人嫌麻烦。',
@@ -1116,6 +1110,56 @@ const EVENTS = [
       { t: '在棋摊边站一会儿', ok: { 心情: -3, mem: '白胡子老爷子回老家了。棋摊换了人，你再没去看过棋。' }, okTxt: '原来「改天再来」是最靠不住的四个字。\n改天，常常就是再也不见。' },
     ],
   },
+
+  /* ============================================================
+   * 年少欢喜：一段懵懂的三幕心事，传纸条 → 同行 → 毕业约定
+   * ============================================================ */
+  {
+    id: 'crush-1', title: '夹在课本里的纸条', min: 12, max: 13, weight: 3,
+    cond: (s) => !s.flags['seen:crush-1'],
+    text: (s) => {
+      const t = s.gender === '男' ? '她' : '他';
+      return `自习课上，一张折得方方正正的纸条从后排传到你手里。展开只有一行字：「这道题你会吗？」\n字迹很秀气。你回头，${t}飞快地低下头，耳根却红了。`;
+    },
+    choices: [
+      { t: '认真写下解法，末尾多问一句「还有哪题不会？」', ok: { 心情: 6, 魅力: 1, flag: { crushA1: true }, mem: '那张纸条在你们之间传了很久，题目越写越少，闲话越写越多。' }, okTxt: '纸条传回来得越来越快。\n后来纸条上的字，比课本上的笔记还工整。' },
+      { t: '写完解法就传回去，不多写一个字', ok: { 智力: 1, 心情: 1 }, okTxt: '纸条传了几次就断了。你把那几张纸条夹进课本最厚的一页，一直没扔。' },
+    ],
+  },
+  {
+    id: 'crush-2', title: '一把伞的距离', min: 14, max: 15, weight: 3,
+    cond: (s) => !s.flags['seen:crush-2'],
+    text: (s) => {
+      const t = s.gender === '男' ? '她' : '他';
+      const lead = s.flags.crushA1
+        ? '传了很久的纸条之后，你们已经很熟了，熟到全班都看得出来，只有你们俩不承认。'
+        : '不知从什么时候起，你总会下意识在人群里找一个身影，找到了，又赶紧移开视线。';
+      return `${lead}\n这天放学突降大雨，你没带伞，站在教学楼门口看雨帘发呆。一把伞忽然撑到你头顶——是${t}：「顺路，一起走吧。」`;
+    },
+    choices: [
+      { t: '把伞往对方那边推了推，约好明天一起上学', ok: { 心情: 8, 魅力: 1.5, flag: { crushA2: true }, mem: '那个雨天，一把伞挤了两个人。从那天起，你们每天放学都「顺路」。' }, okTxt: '伞其实不大，你们各湿了半边肩膀，谁也没说破。\n那条回家的路，你希望它再长一点。' },
+      { t: '道了谢，到路口就各自回家', ok: { 心情: 2 }, okTxt: '雨很大，路很短。到家后你发现，外套上落了一滴不属于自己的雨。' },
+    ],
+  },
+  {
+    id: 'crush-3a', title: '同一座城市的约定', min: 16, max: 17, weight: 5,
+    cond: (s) => s.flags.crushA1 && s.flags.crushA2 && !s.flags.crushDone && !s.flags['seen:crush-3a'],
+    text: (s) => {
+      const t = s.gender === '男' ? '她' : '他';
+      return `毕业纪念册在班里传来传去。轮到你们互相留言，那一页${t}写了很久很久，久到笔尖下的纸都洇开了。\n还回来的时候，${t}没看你的眼睛，声音压得很低：「以后……考同一座城市的大学，好不好？」`;
+    },
+    choices: [
+      { t: '「好，一言为定。」', ok: { 心情: 12, flag: { crushDone: true }, mem: '毕业前你们约好了：考同一座城市的大学。纪念册那一页，你看了很多遍。' }, okTxt: '纪念册合上的时候，蝉鸣正响。\n很多年后你才会知道，那年夏天的约定，是年少能给出去的、最郑重的东西。' },
+    ],
+  },
+  {
+    id: 'crush-3b', title: '留在夏天的心事', min: 16, max: 17, weight: 2,
+    cond: (s) => !(s.flags.crushA1 && s.flags.crushA2) && !s.flags.crushDone && !s.flags['seen:crush-3b'],
+    text: '拍毕业照那天，全班在台阶上挤作一团。你们站得很远，隔着好几排脑袋。\n快门响的前一秒，你忽然想：有些话再不说，就要跟着这个夏天一起结束了。\n可快门还是响了。',
+    choices: [
+      { t: '挥挥手，把没说出口的话留在这个夏天', ok: { 心情: -3, mem: '毕业照上你们隔得很远。有句话，最终留在了那个夏天。' }, okTxt: '照片洗出来，你在人群里找了很久。\n原来青春里的大多数心事，都是没有下文的。' },
+    ],
+  },
 ];
 
 /* ---------------- 里程碑事件 ---------------- */
@@ -1261,6 +1305,27 @@ function checkBondArc() {
   });
 }
 
+/* ---------------- 年少欢喜保底调度 ---------------- */
+function checkCrushArc() {
+  const steps = [
+    { age: 12, id: 'crush-1' },
+    { age: 14, id: 'crush-2' },
+    { age: 16, a: 'crush-3a', b: 'crush-3b' },
+  ];
+  steps.forEach((st) => {
+    if (S.age < st.age) return;
+    if (st.a) {
+      if (S.flags['seen:' + st.a] || S.flags['seen:' + st.b]) return;
+      const ok = S.flags.crushA1 && S.flags.crushA2;
+      const ev = EVENTS.find((e) => e.id === (ok ? st.a : st.b));
+      if (ev) milestoneQueue.push(ev);
+    } else if (!S.flags['seen:' + st.id]) {
+      const ev = EVENTS.find((e) => e.id === st.id);
+      if (ev) milestoneQueue.push(ev);
+    }
+  });
+}
+
 let milestoneQueue = [];
 
 function checkMilestones() {
@@ -1268,6 +1333,7 @@ function checkMilestones() {
   if (m) milestoneQueue.push(m);
   checkFamilyArc();
   checkBondArc();
+  checkCrushArc();
 }
 
 function runMilestones() {

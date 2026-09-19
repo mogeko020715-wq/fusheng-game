@@ -610,6 +610,27 @@ h3 {
 #sheet-log { display: none; }
 #attrs-toggle { display: none; }
 
+/* ---------- 长按解释气泡（移动端） ---------- */
+#tip-pop {
+  position: fixed; z-index: 80;
+  max-width: 240px;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 12px 4px 12px 4px;
+  padding: 8px 12px;
+  font-size: 13px; line-height: 1.6;
+  box-shadow: 2px 3px 0 var(--shadow);
+  pointer-events: none;
+}
+#tip-pop.hidden { display: none; }
+/* 防止 iOS 长按弹系统菜单/选中文字 */
+.attr-row, .need-row, .tag-list, #log-ticker {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ==========================================================
    移动端适配（≤720px）
    ========================================================== */

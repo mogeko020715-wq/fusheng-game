@@ -28,6 +28,19 @@ const Sound = {
     if (!AC) return;
     try { this.ctx = new AC(); } catch (e) { /* 无音频环境 */ }
   },
+  // iOS 解锁：必须在用户手势调用栈里 resume，并真实播放一帧静音
+  unlock() {
+    this.ensure();
+    if (!this.ctx) return;
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.ctx.destination);
+      src.start(0);
+    } catch (e) { /* 忽略 */ }
+  },
   toggle() {
     this.muted = !this.muted;
     try { localStorage.setItem('fusheng_muted', this.muted ? '1' : '0'); } catch (e) { /* 忽略 */ }
@@ -63,7 +76,7 @@ const Sound = {
     this.ensure();
     if (!this.ctx) return;
     try {
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => {}); return; } // 未解锁：丢弃这一声
       switch (name) {
         case 'page':    this._noise(0.30, 900, 0.8, 0.10, 320); break;          // 翻纸
         case 'scratch': this._noise(0.09, 2400, 1.2, 0.06); this._noise(0.07, 1800, 1.2, 0.05); break; // 铅笔
@@ -2463,8 +2476,41 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') { e.preventDefault(); cycleLoc(1); }
 });
 
+/* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */
+function initTipPop() {
+  const pop = $('tip-pop');
+  if (!pop || !document.addEventListener) return;
+  let timer = null, tx = 0, ty = 0;
+  const hide = () => { clearTimeout(timer); timer = null; pop.classList.add('hidden'); };
+  const show = (text) => {
+    pop.textContent = text;
+    pop.classList.remove('hidden');
+    const w = pop.offsetWidth || 200, h = pop.offsetHeight || 40;
+    let x = Math.min(Math.max(8, tx - w / 2), (window.innerWidth || 390) - w - 8);
+    let y = ty - h - 14;
+    if (y < 8) y = ty + 22;
+    pop.style.left = x + 'px';
+    pop.style.top = y + 'px';
+  };
+  document.addEventListener('touchstart', (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('[title]') : null;
+    if (!t || !t.title || !e.touches || !e.touches.length) return;
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+    const text = t.title;
+    timer = setTimeout(() => show(text), 500);
+  }, { passive: true });
+  ['touchend', 'touchcancel', 'touchmove'].forEach((ev) =>
+    document.addEventListener(ev, hide, { passive: true }));
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   Sound.init();
+  // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
+  const unlockAudio = () => Sound.unlock();
+  ['touchstart', 'pointerdown', 'click'].forEach((ev) =>
+    window.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
+  initTipPop();
   const sb = $('btn-sound');
   sb.textContent = Sound.muted ? '🔇' : '🔊';
   sb.onclick = () => {

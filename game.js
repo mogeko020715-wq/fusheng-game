@@ -2499,6 +2499,28 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') { e.preventDefault(); cycleLoc(1); }
 });
 
+/* ---------------- flex gap 支持检测（WebView 基线 Chrome 61） ----------------
+   支持时给 <html> 加 .supports-flex-gap，CSS 据此在 margin 基线与 gap 间切换 */
+function detectFlexGap() {
+  try {
+    if (!document.documentElement || !document.createElement) return;
+    const flex = document.createElement('div');
+    flex.style.display = 'flex';
+    flex.style.flexDirection = 'column';
+    flex.style.rowGap = '1px';
+    flex.style.position = 'absolute';
+    flex.style.visibility = 'hidden';
+    flex.appendChild(document.createElement('div'));
+    flex.appendChild(document.createElement('div'));
+    (document.body || document.documentElement).appendChild(flex);
+    const supported = flex.scrollHeight === 1;
+    if (flex.parentNode) flex.parentNode.removeChild(flex);
+    if (supported && document.documentElement.classList) {
+      document.documentElement.classList.add('supports-flex-gap');
+    }
+  } catch (e) { /* 检测失败则保持 margin 基线布局 */ }
+}
+
 /* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */
 function initTipPop() {
   const pop = $('tip-pop');
@@ -2527,6 +2549,7 @@ function initTipPop() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  detectFlexGap();
   Sound.init();
   // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
   const unlockAudio = () => Sound.unlock();

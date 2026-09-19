@@ -105,6 +105,8 @@ h3 {
   background: var(--paper);
   border-bottom: 2px solid var(--ink);
   padding: 10px 20px;
+  padding-top: calc(10px + constant(safe-area-inset-top));
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
   font-size: 17px;
 }
 #topbar .who span, #topbar .when span { margin-right: 16px; }
@@ -120,7 +122,7 @@ h3 {
 #layout {
   display: grid;
   grid-template-columns: 260px 1fr 300px;
-  gap: 14px;
+  grid-gap: 14px;
   padding: 16px 18px 30px;
   max-width: 1280px;
   margin: 0 auto;
@@ -227,7 +229,7 @@ h3 {
 
 /* ---------- 弹窗 ---------- */
 .modal {
-  position: fixed; inset: 0; z-index: 50;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50;
   background: rgba(28,28,28,.45);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
@@ -322,7 +324,7 @@ h3 {
 #scene-stage.slot-5 { background: #2b2a25; }
 
 #scene-art {
-  position: absolute; inset: 0;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   z-index: 1;
   pointer-events: none;
   transition: opacity .28s var(--ease-in-out-soft), transform .28s var(--ease-in-out-soft);
@@ -339,14 +341,14 @@ h3 {
 #scene-art svg { max-width: 100%; height: 120px; }
 
 /* ---------- 天空：太阳 / 月亮 / 星星 ---------- */
-#sky { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+#sky { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; }
 .cel { position: absolute; opacity: 0; transition: left .9s ease, top .9s ease, opacity .6s; }
 .cel-sun {
   width: 24px; height: 24px; left: 6%; top: 52%;
   border: 2.5px solid var(--ink); border-radius: 50%;
 }
 .cel-sun::after {
-  content: ''; position: absolute; inset: -8px;
+  content: ''; position: absolute; top: -8px; right: -8px; bottom: -8px; left: -8px;
   border: 2px dashed var(--ink); border-radius: 50%;
   animation: sunSpin 26s linear infinite;
 }
@@ -535,7 +537,7 @@ h3 {
 }
 
 /* ---------- 数值飘字 ---------- */
-#fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 80; }
+#fx-layer { position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 80; }
 .float-txt {
   position: fixed; font-size: 14px; font-weight: bold; color: var(--ink);
   text-shadow: 0 1px 0 var(--paper), 0 -1px 0 var(--paper), 1px 0 0 var(--paper), -1px 0 0 var(--paper);
@@ -694,12 +696,17 @@ h3 {
   .ink-btn.big { font-size: 18px; padding: 10px 30px; }
 
   /* 顶栏紧凑 */
-  #topbar { font-size: 13.5px; padding: 8px 10px; }
+  #topbar { font-size: 13.5px; padding: 8px 10px;
+    padding-top: calc(8px + constant(safe-area-inset-top));
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
   #topbar .who span, #topbar .when span { margin-right: 8px; }
   .family-badge { font-size: 11.5px; padding: 0 7px; }
 
   /* 单栏 + 重排：场景 → 身心/岁月 → 资质 */
-  #layout { display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 24px; align-items: stretch; }
+  #layout { display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 24px;
+    padding-bottom: calc(24px + constant(safe-area-inset-bottom));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    align-items: stretch; }
   #panel-center { order: 1; }
   #panel-right { order: 2; }
   #panel-left { order: 3; }
@@ -713,16 +720,16 @@ h3 {
   #scene-desc { font-size: 13px; min-height: 20px; }
 
   /* 地点导航：均分两行 */
-  #locations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #locations { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 6px; }
   .loc-btn { padding: 7px 4px; font-size: 14px; text-align: center; }
 
   /* 行动按钮：大触控目标，两列排布 */
-  #actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #actions { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 8px; }
   .act-btn { padding: 12px 8px; font-size: 15px; margin: 0; }
   .kbd { display: none; }   /* 移动端没有键盘，隐藏键位角标 */
 
   /* 身心：两列紧凑排布 */
-  .needs-box { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .needs-box { display: grid; grid-template-columns: 1fr 1fr; grid-column-gap: 12px; }
   .needs-box h3 { grid-column: 1 / -1; }
   .need-row { margin: 5px 0; font-size: 13px; }
 
@@ -761,7 +768,7 @@ h3 {
   /* 岁月底部面板 */
   #sheet-log {
     display: block;
-    position: fixed; inset: 0; z-index: 60;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60;
     background: rgba(28,28,28,.45);
   }
   #sheet-log.hidden { display: none !important; }
@@ -772,6 +779,8 @@ h3 {
     border-top: 2px solid var(--ink);
     border-radius: 16px 16px 0 0;
     padding: 14px 18px 22px;
+    padding-bottom: calc(22px + constant(safe-area-inset-bottom));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
     animation: sheetUp .3s ease;
     display: flex; flex-direction: column;
   }
@@ -935,3 +944,49 @@ h3 {
     transition-duration: .01ms !important;
   }
 }
+
+/* ==========================================================
+   容器兼容层（WebView 基线 Chrome 61）
+   flex gap 在 Chrome 69+ 才生效：先给所有 flex 容器的子项
+   加 margin 基线；JS 检测到 gap 生效时加 .supports-flex-gap
+   再把 margin 清零，由 gap 接管。grid 一律使用 grid-gap。
+   ========================================================== */
+html { touch-action: manipulation; }
+body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.1); }
+
+/* --- margin 基线（flex gap 不支持时的间距来源） --- */
+.attr-row > *, .need-row > * { margin-right: 8px; }
+.attr-row > :last-child, .need-row > :last-child { margin-right: 0; }
+.tag-list > * { margin: 0 6px 6px 0; }
+.codex-tags > * { margin: 0 6px 6px 0; }
+.mem-tags > * { margin: 0 5px 5px 0; }
+#locations > * { margin: 0 8px 8px 0; }
+#actions > * { margin: 0 4px 8px 4px; }
+#panel-right > * { margin-bottom: 14px; }
+#panel-right > :last-child { margin-bottom: 0; }
+#event-choices > * { margin-bottom: 8px; }
+#event-choices > :last-child { margin-bottom: 0; }
+.end-stats > * { margin: 0 5px 10px 5px; }
+#ending-gallery .gallery-grid > * { margin: 0 4px 8px 4px; }
+
+/* 移动端重排：grid 容器由 grid-gap 负责间距，子项 margin 归零 */
+@media (max-width: 720px) {
+  #layout > * { margin-bottom: 10px; }
+  #layout > *:last-child { margin-bottom: 0; }
+  #locations > *, #actions > * { margin: 0; }
+  .end-stats > * { margin: 0 3px 6px 3px; }
+}
+
+/* --- gap 生效（现代浏览器）：清掉 margin 基线，回归 gap --- */
+.supports-flex-gap .attr-row > *,
+.supports-flex-gap .need-row > * { margin-right: 0; }
+.supports-flex-gap .tag-list > *,
+.supports-flex-gap .codex-tags > *,
+.supports-flex-gap .mem-tags > *,
+.supports-flex-gap #locations > *,
+.supports-flex-gap #actions > *,
+.supports-flex-gap .end-stats > *,
+.supports-flex-gap #ending-gallery .gallery-grid > * { margin: 0; }
+.supports-flex-gap #panel-right > *,
+.supports-flex-gap #event-choices > *,
+.supports-flex-gap #layout > * { margin-bottom: 0; }

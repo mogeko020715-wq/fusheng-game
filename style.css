@@ -170,7 +170,7 @@ h3 {
 .bar-fill {
   height: 100%;
   background: repeating-linear-gradient(-45deg, var(--ink), var(--ink) 3px, #3a3a3a 3px, #3a3a3a 6px);
-  transition: width .35s;
+  transition: width .5s var(--ease-out-soft);
 }
 .bar-fill.health { background: repeating-linear-gradient(-45deg, var(--accent), var(--accent) 3px, #8c271e 3px, #8c271e 6px); }
 
@@ -216,9 +216,6 @@ h3 {
 .loc-btn.active { background: var(--ink); color: var(--paper); }
 .loc-btn:disabled { opacity: .3; cursor: not-allowed; }
 
-#scene-art { text-align: center; margin: 4px 0 8px; }
-#scene-art svg { max-width: 100%; height: 130px; }
-
 #scene-title { text-align: center; font-size: 20px; letter-spacing: .3em; margin-bottom: 2px; }
 #scene-desc { text-align: center; color: var(--gray); font-size: 14px; min-height: 22px; margin-bottom: 12px; }
 
@@ -257,7 +254,11 @@ h3 {
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
-.modal-box { max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; }
+.modal-box { max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; animation: modalIn .36s var(--ease-spring); }
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 #event-text { margin: 10px 0 16px; font-size: 16px; }
 #event-choices { display: flex; flex-direction: column; gap: 8px; }
 .choice-btn {
@@ -346,14 +347,17 @@ h3 {
   position: absolute; inset: 0;
   z-index: 1;
   pointer-events: none;
-  transition: opacity .25s, transform .25s;
+  transition: opacity .28s var(--ease-in-out-soft), transform .28s var(--ease-in-out-soft);
 }
-/* 三层视差：远 / 中 / 近 */
+/* 三层视差：远 / 中 / 近。远景抬高缩小变淡（空气透视），近景贴底 */
 #scene-art .lyr {
   position: absolute; left: 0; right: 0; bottom: 4px;
   text-align: center;
   transition: transform .18s ease-out;
 }
+#scene-art .lyr-far { bottom: 13px; opacity: .62; }
+#scene-art .lyr-far svg { height: 106px; }
+#scene-art .lyr-near { bottom: 2px; }
 #scene-art svg { max-width: 100%; height: 120px; }
 
 /* ---------- 天空：太阳 / 月亮 / 星星 ---------- */
@@ -422,21 +426,21 @@ h3 {
 /* 夜里远景压暗，保住层次 */
 #scene-stage.slot-5 #scene-art .lyr-far svg * { stroke: #7e7a6e; }
 
-/* ---------- 换场过渡 ---------- */
+/* ---------- 换场过渡：出入共用一条缓动曲线，节奏连贯 ---------- */
 #scene-stage.swap-out #scene-art,
-#scene-stage.swap-out #actor { opacity: 0; transform: translateX(-18px) scale(var(--asc, 1)); }
+#scene-stage.swap-out #actor { opacity: 0; transform: translateX(-22px) scale(var(--asc, 1)); }
 #scene-stage.swap-out #actor-fx { opacity: 0; }
 #scene-stage.swap-in #scene-art,
-#scene-stage.swap-in #actor { animation: sceneIn .38s ease; }
+#scene-stage.swap-in #actor { animation: sceneIn .42s var(--ease-out-soft); }
 @keyframes sceneIn {
-  from { opacity: 0; transform: translateX(18px) scale(var(--asc, 1)); }
+  from { opacity: 0; transform: translateX(24px) scale(var(--asc, 1)); }
   to   { opacity: 1; transform: translateX(0) scale(var(--asc, 1)); }
 }
 #scene-title { transition: none; }
-#scene-title.pop { animation: titlePop .5s ease; }
+#scene-title.pop { animation: titlePop .48s var(--ease-spring); }
 @keyframes titlePop {
-  0%   { transform: scale(.82); opacity: .2; letter-spacing: .5em; }
-  100% { transform: scale(1);   opacity: 1;  letter-spacing: .3em; }
+  0%   { transform: translateY(7px) scale(.9); opacity: 0; }
+  100% { transform: translateY(0) scale(1);    opacity: 1; }
 }
 
 /* ---------- 简笔小人 ---------- */
@@ -444,7 +448,7 @@ h3 {
   position: absolute; left: 15%; bottom: 6px;
   width: 52px; height: 70px; z-index: 2;
   pointer-events: auto; cursor: pointer; overflow: visible;
-  transition: opacity .25s, transform .25s, left .55s ease;
+  transition: opacity .28s var(--ease-in-out-soft), transform .28s var(--ease-in-out-soft), left .55s var(--ease-in-out-soft);
   --asc: 1;
   transform: scale(var(--asc));
   transform-origin: 50% 100%;
@@ -462,51 +466,94 @@ h3 {
 #actor.ps-lie .pose-lie { display: block; }
 #actor text { stroke: none; fill: var(--ink); font-family: inherit; }
 #actor .whole { transform-origin: 30px 66px; }
-#actor .pose-stand .whole { animation: actorBob 2.6s ease-in-out infinite; }
-#actor.weak .pose-stand .whole { animation: actorWeak 3.2s ease-in-out infinite; }
-#actor.happy .pose-stand .whole { animation: actorBob 1.5s ease-in-out infinite; }
-@keyframes actorBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+/* 待机呼吸：慢而柔，像铅笔稿轻轻起伏 */
+#actor .pose-stand .whole { animation: actorBob 3.4s var(--ease-in-out-soft) infinite; }
+#actor.weak .pose-stand .whole { animation: actorWeak 3.8s var(--ease-in-out-soft) infinite; }
+#actor.happy .pose-stand .whole { animation: actorBob 1.9s var(--ease-in-out-soft) infinite; }
+@keyframes actorBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.6px); }
+}
 @keyframes actorWeak {
-  0%,100% { transform: translateY(1px) rotate(3deg); }
-  50%     { transform: translateY(2.5px) rotate(3.5deg); }
+  0%, 100% { transform: translateY(1px) rotate(3deg); }
+  50%      { transform: translateY(2.5px) rotate(4deg); }
 }
+/* 走 / 跑：位移交给 left 过渡，动画只做腿部交替 + 身体步频起伏 + 前倾。
+   有限循环次数，保证动作结束双腿回正，不会定格在半空 */
 #actor .leg-l, #actor .leg-r { transform-origin: 30px 46px; }
-#actor.anim-walk .whole { animation: actorTravel .9s linear; }
-#actor.anim-walk .leg-l { animation: legSwing .22s linear infinite alternate; }
-#actor.anim-walk .leg-r { animation: legSwing .22s linear infinite alternate-reverse; }
-#actor.anim-run .whole { animation: actorTravel .7s linear; }
-#actor.anim-run .leg-l { animation: legSwing .14s linear infinite alternate; }
-#actor.anim-run .leg-r { animation: legSwing .14s linear infinite alternate-reverse; }
-@keyframes legSwing { from { transform: rotate(16deg); } to { transform: rotate(-16deg); } }
-@keyframes actorTravel {
-  0%   { transform: translateX(0); }
-  40%  { transform: translateX(34px) translateY(-2px); }
-  100% { transform: translateX(0); }
+#actor.anim-walk .pose-stand { animation: travelLean .95s var(--ease-out-soft); }
+#actor.anim-walk .whole { animation: stepBob .3s ease-in-out 3; }
+#actor.anim-walk .leg-l { animation: legSwingF .3s ease-in-out 3; }
+#actor.anim-walk .leg-r { animation: legSwingB .3s ease-in-out 3; }
+#actor.anim-run .pose-stand { animation: travelLeanRun .95s var(--ease-out-soft); }
+#actor.anim-run .whole { animation: stepBobRun .17s ease-in-out 5; }
+#actor.anim-run .leg-l { animation: legSwingF .17s ease-in-out 5; }
+#actor.anim-run .leg-r { animation: legSwingB .17s ease-in-out 5; }
+@keyframes legSwingF {
+  0%   { transform: rotate(0); }
+  25%  { transform: rotate(19deg); }
+  50%  { transform: rotate(0); }
+  75%  { transform: rotate(-15deg); }
+  100% { transform: rotate(0); }
 }
-#actor.anim-jump .whole { animation: actorJump .9s ease; }
+@keyframes legSwingB {
+  0%   { transform: rotate(0); }
+  25%  { transform: rotate(-15deg); }
+  50%  { transform: rotate(0); }
+  75%  { transform: rotate(19deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes stepBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+@keyframes stepBobRun {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.8px); }
+}
+@keyframes travelLean {
+  0%   { transform: rotate(0); }
+  18%  { transform: rotate(2.6deg); }
+  72%  { transform: rotate(2.6deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes travelLeanRun {
+  0%   { transform: rotate(0); }
+  15%  { transform: rotate(5deg); }
+  75%  { transform: rotate(5deg); }
+  100% { transform: rotate(0); }
+}
+/* 跳跃：下蹲蓄力 → 腾空拉长 → 落地压扁 → 回弹（squash & stretch） */
+#actor.anim-jump .whole { animation: actorJump .95s cubic-bezier(.3, .7, .4, 1); }
 @keyframes actorJump {
-  0%,100% { transform: translateY(0); }
-  35% { transform: translateY(-14px); }
-  60% { transform: translateY(0); }
-  78% { transform: translateY(-6px); }
+  0%   { transform: translateY(0) scale(1, 1); }
+  14%  { transform: translateY(1px) scale(1.07, .88); }
+  38%  { transform: translateY(-15px) scale(.95, 1.08); }
+  52%  { transform: translateY(-16px) scale(.97, 1.05); }
+  66%  { transform: translateY(0) scale(1.1, .84); }
+  82%  { transform: translateY(-4px) scale(.98, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
 }
-#actor.anim-stand .whole { animation: actorNod .9s ease; }
+/* 点头：先微仰再俯（预备动作） */
+#actor.anim-stand .whole { animation: actorNod .95s var(--ease-in-out-soft); }
 @keyframes actorNod {
-  0%,100% { transform: rotate(0); }
-  30% { transform: rotate(6deg); }
-  60% { transform: rotate(-2deg); }
+  0%   { transform: rotate(0); }
+  18%  { transform: rotate(-3deg); }
+  46%  { transform: rotate(7deg); }
+  72%  { transform: rotate(-1.5deg); }
+  100% { transform: rotate(0); }
 }
 #actor.anim-sit .whole,
-#actor.anim-eat .whole { animation: sitBob .9s ease; }
+#actor.anim-eat .whole { animation: sitBob .9s var(--ease-in-out-soft); }
 @keyframes sitBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
 #actor .z { opacity: 0; }
-#actor.anim-sleep .z1 { animation: floatZ 1.5s linear infinite; }
-#actor.anim-sleep .z2 { animation: floatZ 1.5s linear .5s infinite; }
-#actor.anim-sleep .z3 { animation: floatZ 1.5s linear 1s infinite; }
+#actor.anim-sleep .z1 { animation: floatZ 1.8s var(--ease-out-soft) infinite; }
+#actor.anim-sleep .z2 { animation: floatZ 1.8s var(--ease-out-soft) .6s infinite; }
+#actor.anim-sleep .z3 { animation: floatZ 1.8s var(--ease-out-soft) 1.2s infinite; }
 @keyframes floatZ {
-  0% { opacity: 0; transform: translateY(0); }
+  0% { opacity: 0; transform: translateY(2px) scale(.8); }
   30% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-12px) scale(1.1); }
 }
 
 /* ---------- 数值飘字 ---------- */
@@ -514,7 +561,7 @@ h3 {
 .float-txt {
   position: fixed; font-size: 14px; font-weight: bold; color: var(--ink);
   text-shadow: 0 1px 0 var(--paper), 0 -1px 0 var(--paper), 1px 0 0 var(--paper), -1px 0 0 var(--paper);
-  animation: floatUp 1.2s ease-out forwards;
+  animation: floatUp 1.3s var(--ease-out-soft) forwards;
 }
 .float-txt.neg { color: var(--accent); }
 @keyframes floatUp {
@@ -541,13 +588,13 @@ h3 {
   border: 1px solid currentColor; border-radius: 3px;
   padding: 2px 3px; margin-left: 6px; opacity: .5; vertical-align: 2px;
 }
-.act-btn.clicked { animation: btnPop .3s ease; }
-@keyframes btnPop { 0% { transform: scale(1); } 40% { transform: scale(.92); } 100% { transform: scale(1); } }
+.act-btn.clicked { animation: btnPop .34s var(--ease-spring); }
+@keyframes btnPop { 0% { transform: scale(1); } 40% { transform: scale(.9); } 100% { transform: scale(1); } }
 .snd-btn {
   background: none; border: none; font-size: 16px;
   cursor: pointer; font-family: inherit; padding: 0 2px;
 }
-#log p:first-child { animation: logIn .45s ease; }
+#log p:first-child { animation: logIn .5s var(--ease-out-soft); }
 @keyframes logIn {
   from { opacity: 0; transform: translateY(-6px); background: rgba(179,56,44,.08); }
   to   { opacity: 1; transform: translateY(0);   background: transparent; }
@@ -619,9 +666,9 @@ h3 {
 .scroll-walker .pose-stand { display: block; }
 .scroll-walker .leg-l, .scroll-walker .leg-r {
   transform-origin: 30px 46px;
-  animation: legSwing .22s linear infinite alternate;
+  animation: legSwingF .3s ease-in-out infinite;
 }
-.scroll-walker .leg-r { animation-direction: alternate-reverse; }
+.scroll-walker .leg-r { animation-name: legSwingB; }
 .scroll-walker.fallen .pose-stand { display: none; }
 .scroll-walker.fallen .pose-lie { display: block; }
 .scroll-walker.fallen .leg-l, .scroll-walker.fallen .leg-r { animation: none; }
@@ -816,29 +863,32 @@ h3 {
 #actor.p-steam .prop-steam,
 #actor.p-bubble .prop-bubble { display: block; }
 
-/* ---------- 新动作：吓一跳 / 庆祝 / 摔倒 ---------- */
-#actor.anim-startle .whole { animation: startleJump .55s ease; }
+/* ---------- 新动作：吓一跳 / 庆祝 / 摔倒（带挤压拉伸与回弹） ---------- */
+#actor.anim-startle .whole { animation: startleJump .6s cubic-bezier(.3, .7, .4, 1); }
 @keyframes startleJump {
-  0%   { transform: translateY(0) rotate(0); }
-  25%  { transform: translateY(-9px) rotate(-7deg); }
-  50%  { transform: translateY(0) rotate(0); }
-  75%  { transform: translateY(-4px) rotate(5deg); }
-  100% { transform: translateY(0) rotate(0); }
+  0%   { transform: translateY(0) rotate(0) scale(1, 1); }
+  16%  { transform: translateY(1px) rotate(0) scale(1.06, .9); }
+  42%  { transform: translateY(-10px) rotate(-6deg) scale(.96, 1.06); }
+  62%  { transform: translateY(0) rotate(0) scale(1.06, .9); }
+  80%  { transform: translateY(-3px) rotate(4deg) scale(1, 1); }
+  100% { transform: translateY(0) rotate(0) scale(1, 1); }
 }
-#actor.anim-celebrate .whole { animation: celebrateSpin 1s ease; }
+#actor.anim-celebrate .whole { animation: celebrateSpin 1.05s cubic-bezier(.3, .7, .4, 1); }
 @keyframes celebrateSpin {
-  0%   { transform: translateY(0) rotate(0); }
-  35%  { transform: translateY(-14px) rotate(180deg); }
-  70%  { transform: translateY(0) rotate(360deg); }
-  85%  { transform: translateY(-5px) rotate(360deg); }
-  100% { transform: translateY(0) rotate(360deg); }
+  0%   { transform: translateY(0) rotate(0) scale(1, 1); }
+  12%  { transform: translateY(1px) rotate(0) scale(1.07, .88); }
+  40%  { transform: translateY(-15px) rotate(180deg) scale(.95, 1.07); }
+  68%  { transform: translateY(0) rotate(360deg) scale(1.09, .86); }
+  84%  { transform: translateY(-5px) rotate(360deg) scale(.99, 1.02); }
+  100% { transform: translateY(0) rotate(360deg) scale(1, 1); }
 }
-#actor.anim-trip .whole { animation: tripFall .95s ease; }
+#actor.anim-trip .whole { animation: tripFall 1s var(--ease-in-out-soft); }
 @keyframes tripFall {
   0%   { transform: rotate(0); }
-  30%  { transform: rotate(74deg) translate(3px, 4px); }
-  55%  { transform: rotate(74deg) translate(3px, 4px); }
-  82%  { transform: rotate(-7deg); }
+  12%  { transform: rotate(-6deg); }
+  34%  { transform: rotate(76deg) translate(3px, 4px); }
+  56%  { transform: rotate(74deg) translate(3px, 4px); }
+  82%  { transform: rotate(-8deg); }
   100% { transform: rotate(0); }
 }
 
@@ -849,8 +899,12 @@ h3 {
   pointer-events: none;
   transform: scale(var(--asc, 1));
   transform-origin: 50% 100%;
-  transition: opacity .25s, left .55s ease;
+  transition: opacity .28s var(--ease-in-out-soft), left .55s var(--ease-in-out-soft);
 }
+/* 情绪气泡跟随小人年龄缩放 */
+#actor-fx.age-s { --asc: .72; }
+#actor-fx.age-m { --asc: .9; }
+#actor-fx.age-l { --asc: 1.12; }
 #actor-fx .mb, #actor-fx .star {
   display: none;
   position: absolute;
@@ -892,4 +946,14 @@ h3 {
   0%   { transform: translateY(6px) scale(.4); opacity: 0; }
   30%  { opacity: 1; }
   100% { transform: translateY(-16px) scale(1.2); opacity: 0; }
+}
+
+
+/* ---------- 无障碍：系统要求减弱动效时，收起所有循环与位移动画 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

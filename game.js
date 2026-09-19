@@ -186,19 +186,34 @@ function propFor(id) {
   return null;
 }
 
-/* ---------------- 小人走位：行动时走到场景对应位置（占舞台宽度的 %） ---------------- */
-const ACTOR_HOME_X = 15;
+/* ---------------- 小人走位：行动时走到场景对应位置 ----------------
+ * 站位用场景坐标（viewBox 宽 220），渲染时按 SVG 实际位置换算成舞台 %，
+ * 保证任何窗口宽度下小人都能真正走到家门口 / 湖边 / 摊位前 */
+const ACTOR_HOME_X = 30;
 const ACTOR_SPOT = {
-  home:     { sleep: 48, meal: 46, wash: 30, play: 34, study: 52, exercise: 22, chore: 40, art: 56, cook: 47, chat: 43 },
-  park:     { walk: 46, slide: 32, fish: 68, watch: 54 },
-  school:   { class: 50, skip: 22, club: 52 },
-  square:   { book: 40, toy: 44, snack: 42, artist: 62, chess: 34 },
-  market:   { veg: 48, deli: 62, carry: 38 },
-  hospital: { cure: 52, checkup: 46 },
+  home:     { sleep: 106, meal: 100, wash: 22, play: 66, study: 110, exercise: 36, chore: 82, art: 118, cook: 102, chat: 90 },
+  park:     { walk: 112, slide: 142, fish: 172, watch: 72 },
+  school:   { class: 110, skip: 32, club: 114 },
+  square:   { book: 66, toy: 92, snack: 58, artist: 116, chess: 152 },
+  market:   { veg: 92, deli: 124, carry: 52 },
+  hospital: { cure: 110, checkup: 94 },
 };
 function actorGo(actId) {
   const spot = actId && S && ACTOR_SPOT[S.location] ? ACTOR_SPOT[S.location][actId] : null;
-  const left = (spot != null ? spot : ACTOR_HOME_X) + '%';
+  const x = spot != null ? spot : ACTOR_HOME_X;
+  let left = '15%';
+  const stage = $('scene-stage');
+  const svg = stage && stage.querySelector ? stage.querySelector('.lyr-mid svg') : null;
+  const actorEl = $('actor');
+  if (stage && svg && stage.getBoundingClientRect) {
+    const sr = stage.getBoundingClientRect();
+    const vr = svg.getBoundingClientRect();
+    if (sr.width && vr.width) {
+      const aw = (actorEl && actorEl.offsetWidth) || 52;
+      const px = vr.left - sr.left + (x / 220) * vr.width - aw / 2;
+      left = (px / sr.width * 100).toFixed(2) + '%';
+    }
+  }
   ['actor', 'actor-fx'].forEach((id) => {
     const el = $(id);
     if (el && el.style) el.style.left = left;
@@ -220,8 +235,8 @@ function switchLocation(id) {
     stage.classList.add('swap-in');
     const t = $('scene-title');
     t.classList.add('pop');
-    setTimeout(() => { stage.classList.remove('swap-in'); t.classList.remove('pop'); }, 500);
-  }, 260);
+    setTimeout(() => { stage.classList.remove('swap-in'); t.classList.remove('pop'); }, 520);
+  }, 280);
 }
 function cycleLoc(dir) {
   if (!S) return;
@@ -1782,14 +1797,16 @@ function resolveChoice(ev, c, isMilestone) {
 /* 三种家境的家：贫寒漏风平房（屋顶低歪、补丁、关不严的门、墙缝）
  * 小康坡顶小屋 · 富贵大屋檐四合院（飞檐、灯笼、窗棂） */
 const HOME_MID = {
+  /* 贫寒：歪斜的低平房 —— 屋顶一块补丁、一扇关不严的门、一道墙缝，各自留足间距 */
   poor: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 62 L108 32 L174 56"/>
-      <path d="M120 44 l16 -5 7 11 -16 5 z"/>
-      <path d="M58 62 L56 102 M168 56 L172 102 M54 102 H174"/>
-      <path d="M100 76 L98 102 M100 76 L122 74 L126 102"/>
-      <rect class="win" x="66" y="70" width="16" height="14"/>
-      <path d="M140 68 l4 8 -3 8 5 10" stroke-width="1.8"/>
+      <path d="M48 60 L106 32 L170 54"/>
+      <path d="M120 41 l15 -4 6 10 -15 4 z"/>
+      <path d="M54 60 L52 102 M164 54 L168 102"/>
+      <path d="M94 78 V102 M94 78 H118 V97"/>
+      <rect class="win" x="63" y="68" width="15" height="13"/>
+      <path d="M140 66 l3 8 -2 8 4 9" stroke-width="1.7"/>
       <path d="M15 102 H205"/></svg>`,
+  /* 小康：坡顶小屋 + 烟囱炊烟 */
   middle: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M30 60 L110 18 L190 60"/>
       <rect x="142" y="22" width="10" height="20"/>
@@ -1798,45 +1815,50 @@ const HOME_MID = {
       <rect x="48" y="60" width="124" height="42"/>
       <rect x="96" y="74" width="26" height="28"/><rect class="win" x="60" y="70" width="18" height="16"/><rect class="win" x="144" y="70" width="18" height="16"/>
       <path d="M15 102 H205"/></svg>`,
+  /* 富贵：大屋檐四合院，灯笼挂在门窗之间的空白处 */
   rich: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M24 58 L110 20 L196 58"/>
       <path d="M24 58 q-7 1 -10 9 M196 58 q7 1 10 9"/>
       <rect x="42" y="58" width="136" height="44"/>
       <rect x="96" y="72" width="28" height="30"/><path d="M90 72 h40"/>
-      <rect class="win" x="56" y="68" width="18" height="16"/><path d="M65 68 v16 M56 76 h18" stroke-width="1.5"/>
-      <rect class="win" x="146" y="68" width="18" height="16"/><path d="M155 68 v16 M146 76 h18" stroke-width="1.5"/>
-      <g><animateTransform attributeName="transform" type="rotate" values="-4 84 58; 4 84 58; -4 84 58" dur="3.6s" repeatCount="indefinite"/>
-        <path d="M84 58 v5"/><circle cx="84" cy="67" r="4.5"/></g>
-      <g><animateTransform attributeName="transform" type="rotate" values="4 136 58; -4 136 58; 4 136 58" dur="4.1s" repeatCount="indefinite"/>
-        <path d="M136 58 v5"/><circle cx="136" cy="67" r="4.5"/></g>
+      <rect class="win" x="54" y="68" width="17" height="16"/><path d="M62 68 v16 M54 76 h17" stroke-width="1.5"/>
+      <rect class="win" x="149" y="68" width="17" height="16"/><path d="M157 68 v16 M149 76 h17" stroke-width="1.5"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-4 82 58; 4 82 58; -4 82 58" dur="3.6s" repeatCount="indefinite"/>
+        <path d="M82 58 v5"/><circle cx="82" cy="67" r="4.5"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="4 138 58; -4 138 58; 4 138 58" dur="4.1s" repeatCount="indefinite"/>
+        <path d="M138 58 v5"/><circle cx="138" cy="67" r="4.5"/></g>
       <path d="M15 102 H205"/></svg>`,
 };
 
+/* 构图分区约定（viewBox 220×110，地面线 y=102）：
+ * far  只画远处剪影与云，线条少而淡，地面略高（配合 CSS 抬升），绝不与主体抢戏
+ * mid  主体建筑居中，门窗屋顶各自留间距
+ * near 只放两侧角落小物（x≤40 或 x≥180），中间留作小人走位廊道 */
 const ART = {
   home: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 102 V62 h24 v40 M44 102 V48 h28 v54 M158 102 V56 h26 v46 M190 102 V68 h18 v34"/>
-      <path d="M50 58 h4 M58 58 h4 M50 68 h4 M58 68 h4 M164 66 h4 M172 66 h4 M164 76 h4 M172 76 h4" stroke-width="1.4"/>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;16 0;0 0" dur="22s" repeatCount="indefinite"/>
-        <path d="M96 22 q7 -7 14 0 q8 -5 13 2"/></g>
+      <path d="M4 102 Q56 84 108 94 T216 88"/>
+      <path d="M20 102 V72 h18 v30 M184 102 V78 h16 v24" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;16 0;0 0" dur="26s" repeatCount="indefinite"/>
+        <path d="M60 22 q7 -7 14 0 q8 -5 13 2"/></g>
     </svg>`,
     mid: () => HOME_MID[S.familyKey] || HOME_MID.middle,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 102 V54 M12 57 H64"/>
-      <g><animateTransform attributeName="transform" type="rotate" values="-3 28 57; 3 28 57; -3 28 57" dur="3.8s" repeatCount="indefinite"/>
-        <path d="M23 57 h10 v14 h-10 z M26 57 v-2 M30 57 v-2"/></g>
-      <g><animateTransform attributeName="transform" type="rotate" values="2 50 57; -2 50 57; 2 50 57" dur="4.6s" repeatCount="indefinite"/>
-        <path d="M46 57 h8 v10 h-8 z"/></g>
-      <path d="M182 102 q2 -7 4 0 M188 102 q2 -9 4 0 M194 102 q2 -6 4 0 M200 102 q2 -8 4 0"/>
+      <path d="M10 102 V64 M10 68 H34"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-3 20 68; 3 20 68; -3 20 68" dur="3.8s" repeatCount="indefinite"/>
+        <path d="M16 68 h8 v12 h-8 z"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="2 30 68; -2 30 68; 2 30 68" dur="4.6s" repeatCount="indefinite"/>
+        <path d="M27 68 h6 v9 h-6 z"/></g>
+      <path d="M186 102 q2 -7 4 0 M192 102 q2 -9 4 0 M198 102 q2 -6 4 0 M204 102 q2 -8 4 0"/>
     </svg>`,
   },
   park: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M6 100 Q40 84 74 94 T146 92 T214 88"/>
-      <path d="M170 100 V62 h12 v38 M186 100 V70 h10 v30" stroke-width="1.8"/>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;10 -6;0 0;-8 -3;0 0" dur="12s" repeatCount="indefinite"/>
+      <path d="M172 100 V70 h12 v30 M188 100 V78 h10 v22" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;10 -6;0 0;-8 -3;0 0" dur="14s" repeatCount="indefinite"/>
         <path d="M150 20 l7 9 -7 9 -7 -9 z"/><path d="M150 38 q2 6 -2 10 q-4 4 -1 9" stroke-dasharray="2 3"/></g>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;20 2;0 0" dur="16s" repeatCount="indefinite"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;20 2;0 0" dur="18s" repeatCount="indefinite"/>
         <path d="M56 26 q4 -4 8 0 q4 -4 8 0"/></g>
     </svg>`,
     mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1850,16 +1872,15 @@ const ART = {
       <path d="M196 102 V64 q0 -5 6 -5"/>
       <circle class="lamp-halo" cx="203" cy="61" r="7"/>
       <circle class="lamp-dot" cx="203" cy="61" r="3"/>
-      <path d="M16 102 q2 -7 4 0 M22 102 q2 -9 4 0 M28 102 q2 -6 4 0 M120 102 q2 -7 4 0 M126 102 q2 -8 4 0"/>
+      <path d="M14 102 q2 -7 4 0 M20 102 q2 -9 4 0 M26 102 q2 -6 4 0 M176 102 q2 -7 4 0 M182 102 q2 -8 4 0"/>
       <g><animateTransform attributeName="transform" type="translate" values="0 0;6 -5;12 0" dur="5s" repeatCount="indefinite"/>
         <path d="M96 74 q-4 -4 -1 -7 q3 1 3 5 q0 -4 3 -5 q3 3 -1 7 z"/></g>
     </svg>`,
   },
   school: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 102 V58 h34 v44 M186 102 V64 h24 v38"/>
-      <path d="M15 68 h6 M27 68 h6 M15 78 h6 M27 78 h6 M192 74 h6 M200 74 h6" stroke-width="1.4"/>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;-14 0;0 0" dur="20s" repeatCount="indefinite"/>
+      <path d="M8 102 V66 h26 v36 M186 102 V72 h22 v30"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;-14 0;0 0" dur="22s" repeatCount="indefinite"/>
         <path d="M150 18 q7 -7 14 0 q8 -5 13 2"/></g>
     </svg>`,
     mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1872,16 +1893,15 @@ const ART = {
       <path d="M15 102 H205"/></svg>`,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 108 Q110 93 212 108" stroke-dasharray="5 6"/>
-      <path d="M158 102 v-9 h11 v9 M163 93 v-9 h11 v9 M174 102 v-9 h11 v9" stroke-width="2"/>
-      <path d="M28 102 v-6 M25 96 q3 -4 6 0 M24 102 q2 -5 4 0 M32 102 q2 -6 4 0"/>
+      <path d="M186 102 v-8 h10 v8 M191 94 v-8 h10 v8" stroke-width="2"/>
+      <path d="M22 102 v-6 M19 96 q3 -4 6 0 M18 102 q2 -5 4 0 M28 102 q2 -6 4 0"/>
     </svg>`,
   },
   square: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 102 V46 h22 v56 M34 102 V34 h26 v68 M34 34 l13 -8 13 8 M170 102 V52 h20 v50 M194 102 V66 h16 v36"/>
-      <path d="M47 26 V16"/>
-      <path d="M13 54 h4 M21 54 h4 M13 64 h4 M21 64 h4 M40 44 h4 M48 44 h4 M40 54 h4 M48 54 h4 M176 62 h4 M182 62 h4" stroke-width="1.4"/>
-      <path d="M118 44 h26 v14 h-26 z M131 58 V76 M122 48 h4 M130 48 h8"/>
+      <path d="M8 102 V52 h20 v50 M30 102 V64 h14 v38 M172 102 V58 h20 v44 M196 102 V72 h16 v30"/>
+      <path d="M18 52 V40"/>
+      <path d="M126 46 h24 v13 h-24 z M138 59 V76" stroke-width="1.8"/>
     </svg>`,
     mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M30 45 h90 l-8 14 h-74 z"/><path d="M40 59 v43 M110 59 v43 M40 70 h70 M40 82 h70"/>
@@ -1892,19 +1912,18 @@ const ART = {
         <circle cx="160" cy="80" r="12"/><path d="M160 92 v10 M152 102 h16"/></g>
       <path d="M10 102 H210"/></svg>`,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 94 h32 M22 94 v8 M46 94 v8"/>
+      <path d="M14 102 q2 -6 4 0 M20 102 q2 -8 4 0 M26 102 q2 -5 4 0"/>
+      <path d="M184 94 h28 M188 94 v8 M208 94 v8"/>
       <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="3.4s" repeatCount="indefinite"/>
-        <circle cx="182" cy="54" r="6"/><path d="M182 60 q-2 8 1 14"/></g>
+        <circle cx="170" cy="50" r="6"/><path d="M170 56 q-2 8 1 14"/></g>
       <g><animateTransform attributeName="transform" type="rotate" values="0 92 102; 16 92 102; 0 92 102" dur="1.8s" repeatCount="indefinite"/>
         <path d="M88 102 q2 -6 6 -6 q4 0 4 5"/></g>
-      <path d="M106 102 q2 -5 5 -5 q3 0 3 4"/>
     </svg>`,
   },
   market: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 102 V64 h30 v38 M6 64 l4 -8 h22 l4 8 M184 102 V70 h28 v32 M184 70 l3 -6 h22 l3 6"/>
-      <path d="M196 52 h16 v10 h-16 z M204 52 v-6 M199 57 h4 M206 57 h3" stroke-width="1.8"/>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;12 0;0 0" dur="24s" repeatCount="indefinite"/>
+      <path d="M6 102 V68 h28 v34 M6 68 l4 -8 h20 l4 8 M186 102 V74 h26 v28 M186 74 l3 -6 h20 l3 6"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;12 0;0 0" dur="26s" repeatCount="indefinite"/>
         <path d="M60 20 q7 -7 14 0 q8 -5 13 2"/></g>
     </svg>`,
     mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1913,19 +1932,17 @@ const ART = {
       <rect x="48" y="56" width="94" height="46"/><circle cx="70" cy="76" r="7"/><circle cx="95" cy="78" r="8"/><circle cx="120" cy="75" r="6"/>
       <path d="M10 102 H210"/></svg>`,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 92 h30 l-4 10 H20 z M18 92 q13 -8 26 0"/>
-      <circle cx="26" cy="88" r="3"/><circle cx="34" cy="87" r="3.4"/>
-      <path d="M180 94 h22 M183 94 v8 h16 v-8"/>
-      <circle cx="188" cy="86" r="1.8"><animate attributeName="cy" values="88;76" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.7;0" dur="2.2s" repeatCount="indefinite"/></circle>
-      <circle cx="194" cy="86" r="1.4"><animate attributeName="cy" values="88;74" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.55;0" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/></circle>
+      <path d="M12 92 h28 l-4 10 H16 z M14 92 q12 -8 24 0"/>
+      <circle cx="22" cy="88" r="3"/><circle cx="30" cy="87" r="3.4"/>
+      <path d="M182 94 h22 M185 94 v8 h16 v-8"/>
+      <circle cx="190" cy="86" r="1.8"><animate attributeName="cy" values="88;76" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.7;0" dur="2.2s" repeatCount="indefinite"/></circle>
+      <circle cx="196" cy="86" r="1.4"><animate attributeName="cy" values="88;74" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.55;0" dur="2.2s" begin="-1.1s" repeatCount="indefinite"/></circle>
     </svg>`,
   },
   hospital: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 102 V58 h30 v44 M182 102 V64 h26 v38"/>
-      <path d="M14 68 h5 M24 68 h5 M14 78 h5 M24 78 h5 M188 74 h5 M198 74 h5" stroke-width="1.4"/>
-      <path d="M52 52 v-14 h14 v14 M55 38 h8 M52 52 l-4 10 M66 52 l4 10 M59 42 v6 M56 45 h6"/>
-      <g><animateTransform attributeName="transform" type="translate" values="0 0;-12 0;0 0" dur="19s" repeatCount="indefinite"/>
+      <path d="M8 102 V62 h26 v40 M186 102 V70 h24 v32"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;-12 0;0 0" dur="21s" repeatCount="indefinite"/>
         <path d="M140 20 q7 -7 14 0 q8 -5 13 2"/></g>
     </svg>`,
     mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1935,8 +1952,8 @@ const ART = {
       <path d="M50 28 h120" stroke-dasharray="4 5"/>
       <path d="M15 102 H205"/></svg>`,
     near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 94 h32 M20 94 v8 M44 94 v8 M16 86 h5 M45 86 h3"/>
-      <path d="M190 102 V86 M190 86 q-8 -2 -10 -10 q8 0 10 4 q2 -4 10 -4 q-2 8 -10 10"/>
+      <path d="M14 94 h30 M18 94 v8 M40 94 v8"/>
+      <path d="M192 102 V86 M192 86 q-8 -2 -10 -10 q8 0 10 4 q2 -4 10 -4 q-2 8 -10 10"/>
       <path d="M96 102 q2 -6 4 0 M102 102 q2 -7 4 0"/>
     </svg>`,
   },
@@ -2183,8 +2200,14 @@ function render() {
   if (weak) actor.classList.add('weak'); else actor.classList.remove('weak');
   if (!weak && S.needs.心情 >= 80) actor.classList.add('happy'); else actor.classList.remove('happy');
   // 随年龄长大
+  const ageCls = S.age <= 6 ? 'age-s' : S.age <= 12 ? 'age-m' : 'age-l';
   ['age-s', 'age-m', 'age-l'].forEach((c) => actor.classList.remove(c));
-  actor.classList.add(S.age <= 6 ? 'age-s' : S.age <= 12 ? 'age-m' : 'age-l');
+  actor.classList.add(ageCls);
+  const fx = $('actor-fx'); // 情绪气泡层同步缩放
+  if (fx && fx.classList) {
+    ['age-s', 'age-m', 'age-l'].forEach((c) => fx.classList.remove(c));
+    fx.classList.add(ageCls);
+  }
   // 情绪气泡
   if (S.needs.心情 < 25) actor.classList.add('moodlow'); else actor.classList.remove('moodlow');
   if (S.buffs.some((b) => b.name === '感冒')) actor.classList.add('sick'); else actor.classList.remove('sick');

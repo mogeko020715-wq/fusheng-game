@@ -365,10 +365,8 @@ let S = null;          // 当前人生
 let eventLock = false; // 弹窗打开时锁定操作
 let currentEventId = null; // 当前打开的事件（存档用）
 
-let pendingGender = null; // 开局性别选择：'男'/'女'/null(随缘)
-
 function newLife() {
-  const gender = pendingGender || (chance(0.5) ? '男' : '女');
+  const gender = chance(0.5) ? '男' : '女';
   const fk = pick(FAMILY_KEYS);
   const fam = FAMILY[fk];
   const name = pick(SURNAMES) + (gender === '男' ? pick(NAMES_M) : pick(NAMES_F));
@@ -2544,15 +2542,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!m) Sound.play('pop');
   };
   $('btn-born').onclick = startLife;
-  // 开局性别选择：默认随缘
-  document.querySelectorAll('.gender-btn').forEach((b) => {
-    b.onclick = () => {
-      document.querySelectorAll('.gender-btn').forEach((x) => x.classList.remove('sel'));
-      b.classList.add('sel');
-      pendingGender = b.dataset.g || null;
-      Sound.play('pop');
-    };
-  });
   // 继续上一世
   const bc = $('btn-continue');
   const saved = loadSave();

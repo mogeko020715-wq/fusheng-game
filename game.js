@@ -244,8 +244,8 @@ const FAMILY = {
             meal: 38, allowance: 3,  meals: ['咸菜配白粥', '清汤寡水的面条', '残羹剩饭'] },
   middle: { name: '小康之家', badge: '康', home: ['两层小独栋', '方便的电梯公寓'],
             meal: 52, allowance: 12, meals: ['荤素搭配的家常菜', '热腾腾的三菜一汤', '妈妈拿手的红烧肉'] },
-  rich:   { name: '富贵之家', badge: '富', home: ['带庭院的四合院', '三层大别墅，还有保姆'],
-            meal: 66, allowance: 45, meals: ['山珍海味一大桌', '龙虾鲍鱼随便吃', '米其林大厨的私宴'] },
+  rich:   { name: '富贵之家', badge: '富', home: ['带庭院的四合院', '临湖的三层小楼'],
+            meal: 66, allowance: 45, meals: ['精心搭配的一桌菜', '时令鲜蔬与好汤', '妈妈点的一桌好菜'] },
 };
 const FAMILY_KEYS = ['poor', 'poor', 'middle', 'middle', 'middle', 'rich']; // 概率
 
@@ -350,8 +350,10 @@ let S = null;          // 当前人生
 let eventLock = false; // 弹窗打开时锁定操作
 let currentEventId = null; // 当前打开的事件（存档用）
 
+let pendingGender = null; // 开局性别选择：'男'/'女'/null(随缘)
+
 function newLife() {
-  const gender = chance(0.5) ? '男' : '女';
+  const gender = pendingGender || (chance(0.5) ? '男' : '女');
   const fk = pick(FAMILY_KEYS);
   const fam = FAMILY[fk];
   const name = pick(SURNAMES) + (gender === '男' ? pick(NAMES_M) : pick(NAMES_F));
@@ -1046,7 +1048,7 @@ const EVENTS = [
     cond: (s) => s.flags.bond === 'pang' && !s.flags['seen:bond-pang-2'],
     text: '这几年你发现一个秘密：小胖的饭盒里，红烧肉永远比别人的多一份。今天他支支吾吾坦白——是他妈妈特意多做的，「我妈说，同桌要一起长肉。」',
     choices: [
-      { t: '明天开始，你的饭盒也分他一半', ok: { 心情: 8, 魅力: 1.5, flag: { bondA2: true }, mem: '你们的饭盒从此不分彼此。两个半大小子，一起长了好多斤。' }, okTxt: '第二天你把自己饭盒推过去的时候，小胖眼睛亮得像灯泡。\n「咱俩天下第一好！」' },
+      { t: '明天开始，你的饭盒也分他一半', ok: { 心情: 8, 魅力: 1.5, flag: { bondA2: true }, mem: '你们的饭盒从此不分彼此。两个半大孩子，一起长了好多斤。' }, okTxt: '第二天你把自己饭盒推过去的时候，小胖眼睛亮得像灯泡。\n「咱俩天下第一好！」' },
       { t: '白吃就白吃，笑嘻嘻', ok: { 心情: 4, 饱食: 8 }, okTxt: '你吃得很香。小胖也不介意，只是帮你把肥肉都挑走了——他说你不爱吃肥的。' },
     ],
   },
@@ -1409,7 +1411,7 @@ const EVENTS = [
   {
     id: 'taiji-2', title: '晨练的队伍', min: 13, max: 17, weight: 3,
     cond: (s) => s.flags['spec_武术'] === '太极' && !s.flags['seen:taiji-2'],
-    text: '不知从哪天起，爷爷身后跟了一群小孩，都是冲你来的——「跟那个哥哥/姐姐学」。\n爷爷背着手站在一边笑：「以后，早课你带。」',
+    text: (s) => `不知从哪天起，爷爷身后跟了一群小孩，都是冲你来的——「跟那个${s.gender === '男' ? '哥哥' : '姐姐'}学」。\n爷爷背着手站在一边笑：「以后，早课你带。」`,
     choices: [
       { t: '接下早课，从起势教起', ok: { 魅力: 1.5, 心情: 8, mem: '公园的晨练队伍里，最前面领打的人换成了你。爷爷坐在长椅上，揣着手看。' }, okTxt: '第一堂早课你紧张得同手同脚。\n收势的时候回头，爷爷正冲你点头，一下，又一下。' },
     ],
@@ -2519,6 +2521,15 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!m) Sound.play('pop');
   };
   $('btn-born').onclick = startLife;
+  // 开局性别选择：默认随缘
+  document.querySelectorAll('.gender-btn').forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll('.gender-btn').forEach((x) => x.classList.remove('sel'));
+      b.classList.add('sel');
+      pendingGender = b.dataset.g || null;
+      Sound.play('pop');
+    };
+  });
   // 继续上一世
   const bc = $('btn-continue');
   const saved = loadSave();

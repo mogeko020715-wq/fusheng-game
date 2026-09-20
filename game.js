@@ -192,7 +192,10 @@ function actorAnim(name, prop) {
     if (name === 'walk') { spritePlay('walk', 150, [0, -2, 0, 0, -2, 0]); return; }
     if (name === 'run') { spritePlay('walk', 95, [0, -3, 0, 0, -3, 0]); return; }
     if (name === 'jump' || name === 'celebrate') { spritePlay('jump', 190, [0, -8, -26, -4, 0]); return; }
-    if (spriteSt.busy) spriteStop(); // 其它动作打断帧播放，交给 CSS 表演
+    if (name === 'sleep') { spriteSleep(); return; } // 蹲身→横躺帧→起身
+    if (name === 'eat') spriteHold('eat', 1600);       // 静态帧 + class 流程的 sitBob 微动叠加
+    else if (name === 'sit') spriteHold('sit', 1600);
+    else if (spriteSt.busy) spriteStop(); // 其它动作打断帧播放，交给 CSS 表演
   }
   a.classList.add('anim-' + name);
   if (prop) a.classList.add('p-' + prop);
@@ -216,7 +219,7 @@ const spriteSt = { ready: false, busy: false, timer: null };
 const spriteCache = {};
 
 function spritePreload() {
-  const names = ['stand', 'happy', 'weak'].concat(SPRITE_SETS.walk, SPRITE_SETS.jump);
+  const names = ['stand', 'happy', 'weak', 'sick', 'sit', 'eat', 'sleep'].concat(SPRITE_SETS.walk, SPRITE_SETS.jump);
   let left = names.length;
   let dead = false;
   names.forEach((n) => {
@@ -241,19 +244,61 @@ function spriteSet(name) {
     el.src = spriteCache[name].src;
   }
 }
-/* 情绪 → 静态帧：虚弱/低落/感冒共用 weak，心情≥80 用 happy，其余 stand */
+/* 情绪 → 静态帧：感冒 sick、虚弱/低落 weak，心情≥80 用 happy，其余 stand */
 function updateSpriteMood() {
   if (!spriteSt.ready || spriteSt.busy) return;
   if (!S) { spriteSet('stand'); return; }
-  const down = S.needs.精力 < 25 || S.needs.健康 < 30 || S.needs.心情 < 25 ||
-    S.buffs.some((b) => b.name === '感冒');
+  if (S.buffs.some((b) => b.name === '感冒')) { spriteSet('sick'); return; }
+  const down = S.needs.精力 < 25 || S.needs.健康 < 30 || S.needs.心情 < 25;
   spriteSet(down ? 'weak' : S.needs.心情 >= 80 ? 'happy' : 'stand');
 }
+/* 静态动作帧：换图保持 dur 毫秒后恢复情绪帧（与 CSS class 表演可叠加） */
+function spriteHold(name, dur) {
+  const el = $('actor-sprite');
+  if (!spriteSt.ready || !el || !spriteCache[name]) return;
+  spriteClearTimers();
+  el.classList.remove('f-sleep');
+  spriteSt.busy = true;
+  spriteSet(name);
+  spriteSt.holdT = setTimeout(() => {
+    spriteSt.busy = false;
+    updateSpriteMood();
+  }, dur);
+}
+/* 睡觉：蹲身 → 换横躺帧躺定 → 换回站姿起身（横版帧用 f-sleep 类切宽度基准） */
+function spriteSleep() {
+  const el = $('actor-sprite');
+  if (!spriteSt.ready || !el || !spriteCache.sleep) return;
+  spriteClearTimers();
+  spriteSt.busy = true;
+  el.style.translate = '0px 8px'; // 先蹲身
+  spriteSt.s1 = setTimeout(() => {
+    spriteSet('sleep');
+    el.classList.add('f-sleep');
+    el.style.translate = '0px 0px';
+  }, 450);
+  spriteSt.s2 = setTimeout(() => { // 躺 1.45s 后起身
+    el.classList.remove('f-sleep');
+    spriteSet('stand');
+    el.style.translate = '0px 8px';
+  }, 1900);
+  spriteSt.s3 = setTimeout(() => {
+    el.style.translate = '0px 0px';
+    spriteSt.busy = false;
+    updateSpriteMood();
+  }, 2350);
+}
 /* 帧播放器：换 img.src 播帧，Y 位移走 translate 属性（与 CSS transform 动画互不干扰） */
+function spriteClearTimers() {
+  clearInterval(spriteSt.timer);
+  clearTimeout(spriteSt.holdT);
+  ['s1', 's2', 's3'].forEach((k) => clearTimeout(spriteSt[k]));
+}
 function spritePlay(kind, interval, dy) {
   const el = $('actor-sprite');
   if (!spriteSt.ready || !el) return;
-  clearInterval(spriteSt.timer);
+  spriteClearTimers();
+  el.classList.remove('f-sleep'); // 若打断了睡觉，先退出横版帧规格
   const frames = SPRITE_SETS[kind];
   let i = 0;
   spriteSt.busy = true;
@@ -267,11 +312,14 @@ function spritePlay(kind, interval, dy) {
   spriteSt.timer = setInterval(step, interval);
 }
 function spriteStop() {
-  clearInterval(spriteSt.timer);
+  spriteClearTimers();
   spriteSt.timer = null;
   spriteSt.busy = false;
   const el = $('actor-sprite');
-  if (el) el.style.translate = '0px 0px';
+  if (el) {
+    el.style.translate = '0px 0px';
+    el.classList.remove('f-sleep');
+  }
   updateSpriteMood();
 }
 

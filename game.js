@@ -201,7 +201,7 @@ function actorAnim(name, prop) {
     a.classList.remove('anim-' + name);
     a.classList.remove('ps-sit', 'ps-lie');
     PROP_CLASSES.forEach((c) => a.classList.remove(c));
-  }, name === 'sleep' ? 1500 : 950);
+  }, name === 'sleep' ? 2400 : 950);
 }
 
 /* ---------------- 立绘模式：线稿 sprite 接管简笔小人 ----------------

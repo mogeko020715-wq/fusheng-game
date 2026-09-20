@@ -19,6 +19,7 @@ const round1 = (v) => Math.round(v * 10) / 10;
 const Sound = {
   ctx: null,
   muted: false,
+  pending: null,   // iOS 解锁前被吞掉的最近一声，解锁后补播
   init() {
     try { this.muted = localStorage.getItem('fusheng_muted') === '1'; } catch (e) { this.muted = false; }
   },
@@ -28,12 +29,26 @@ const Sound = {
     if (!AC) return;
     try { this.ctx = new AC(); } catch (e) { /* 无音频环境 */ }
   },
+  _asleep() {
+    // suspended 是通用锁定态；interrupted 是 iOS Safari 被系统打断后的专属态
+    return this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted');
+  },
   // iOS 解锁：必须在用户手势调用栈里 resume，并真实播放一帧静音
   unlock() {
     this.ensure();
     if (!this.ctx) return;
     try {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      if (this._asleep()) {
+        const p = this.ctx.resume();
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            // 解锁成功：补播刚被吞掉的那一声（比如降生时的钟声）
+            const pend = this.pending;
+            this.pending = null;
+            if (pend && !this.muted) this.play(pend);
+          }).catch(() => {});
+        }
+      }
       const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
@@ -76,7 +91,13 @@ const Sound = {
     this.ensure();
     if (!this.ctx) return;
     try {
-      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => {}); return; } // 未解锁：丢弃这一声
+      if (this._asleep()) {
+        // 未解锁：记下这一声，等 unlock() 的 resume 落地后补播
+        this.pending = name;
+        const p = this.ctx.resume();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+        return;
+      }
       switch (name) {
         case 'page':    this._noise(0.30, 900, 0.8, 0.10, 320); break;          // 翻纸
         case 'scratch': this._noise(0.09, 2400, 1.2, 0.06); this._noise(0.07, 1800, 1.2, 0.05); break; // 铅笔
@@ -2638,7 +2659,7 @@ window.addEventListener('DOMContentLoaded', () => {
   spritePreload();
   // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
   const unlockAudio = () => Sound.unlock();
-  ['touchstart', 'pointerdown', 'click'].forEach((ev) =>
+  ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click'].forEach((ev) =>
     window.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
   initTipPop();

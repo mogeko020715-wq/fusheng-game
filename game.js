@@ -166,6 +166,13 @@ function actorAnim(name, prop) {
   if (name === 'sleep') a.classList.add('ps-lie');
   ANIM_CLASSES.forEach((c) => a.classList.remove(c));
   PROP_CLASSES.forEach((c) => a.classList.remove(c));
+  // 立绘已启用：帧序列动作直接播帧（走路/跑步共用 walk 六帧，跳跃/庆祝用 jump 五帧）
+  if (spriteSt.ready) {
+    if (name === 'walk') { spritePlay('walk', 150, [0, -2, 0, 0, -2, 0]); return; }
+    if (name === 'run') { spritePlay('walk', 95, [0, -3, 0, 0, -3, 0]); return; }
+    if (name === 'jump' || name === 'celebrate') { spritePlay('jump', 190, [0, -8, -26, -4, 0]); return; }
+    if (spriteSt.busy) spriteStop(); // 其它动作打断帧播放，交给 CSS 表演
+  }
   a.classList.add('anim-' + name);
   if (prop) a.classList.add('p-' + prop);
   clearTimeout(actorAnim._t);
@@ -174,6 +181,77 @@ function actorAnim(name, prop) {
     a.classList.remove('ps-sit', 'ps-lie');
     PROP_CLASSES.forEach((c) => a.classList.remove(c));
   }, name === 'sleep' ? 1500 : 950);
+}
+
+/* ---------------- 立绘模式：线稿 sprite 接管简笔小人 ----------------
+ * 全部帧加载成功才启用（给 svg#actor 加 spr-off，CSS 兄弟选择器显示立绘层），
+ * 任何一张失败就保持 SVG 简笔小人，天然回退 */
+const SPRITE_DIR = 'assets/actor/sprites/';
+const SPRITE_SETS = {
+  walk: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
+  jump: ['jump-1', 'jump-2', 'jump-3', 'jump-4', 'jump-5'],
+};
+const spriteSt = { ready: false, busy: false, timer: null };
+const spriteCache = {};
+
+function spritePreload() {
+  const names = ['stand', 'happy', 'weak'].concat(SPRITE_SETS.walk, SPRITE_SETS.jump);
+  let left = names.length;
+  let dead = false;
+  names.forEach((n) => {
+    const im = new Image();
+    im.onload = () => { if (!dead && --left === 0) spriteEnable(); };
+    im.onerror = () => { dead = true; };
+    im.src = SPRITE_DIR + n + '.png';
+    spriteCache[n] = im;
+  });
+}
+function spriteEnable() {
+  spriteSt.ready = true;
+  const a = $('actor');
+  if (a && a.classList) a.classList.add('spr-off');
+  updateSpriteMood();
+}
+function spriteSet(name) {
+  const el = $('actor-sprite');
+  if (!el || !spriteCache[name]) return;
+  if (el.dataset.cur !== name) {
+    el.dataset.cur = name;
+    el.src = spriteCache[name].src;
+  }
+}
+/* 情绪 → 静态帧：虚弱/低落/感冒共用 weak，心情≥80 用 happy，其余 stand */
+function updateSpriteMood() {
+  if (!spriteSt.ready || spriteSt.busy) return;
+  if (!S) { spriteSet('stand'); return; }
+  const down = S.needs.精力 < 25 || S.needs.健康 < 30 || S.needs.心情 < 25 ||
+    S.buffs.some((b) => b.name === '感冒');
+  spriteSet(down ? 'weak' : S.needs.心情 >= 80 ? 'happy' : 'stand');
+}
+/* 帧播放器：换 img.src 播帧，Y 位移走 translate 属性（与 CSS transform 动画互不干扰） */
+function spritePlay(kind, interval, dy) {
+  const el = $('actor-sprite');
+  if (!spriteSt.ready || !el) return;
+  clearInterval(spriteSt.timer);
+  const frames = SPRITE_SETS[kind];
+  let i = 0;
+  spriteSt.busy = true;
+  const step = () => {
+    if (i >= frames.length) { spriteStop(); return; }
+    spriteSet(frames[i]);
+    el.style.translate = '0px ' + (dy && dy[i] ? dy[i] : 0) + 'px';
+    i += 1;
+  };
+  step();
+  spriteSt.timer = setInterval(step, interval);
+}
+function spriteStop() {
+  clearInterval(spriteSt.timer);
+  spriteSt.timer = null;
+  spriteSt.busy = false;
+  const el = $('actor-sprite');
+  if (el) el.style.translate = '0px 0px';
+  updateSpriteMood();
 }
 
 /* 动作 → 手中道具 */
@@ -214,7 +292,7 @@ function actorGo(actId) {
       left = (px / sr.width * 100).toFixed(2) + '%';
     }
   }
-  ['actor', 'actor-fx'].forEach((id) => {
+  ['actor', 'actor-fx', 'actor-sprite-wrap'].forEach((id) => {
     const el = $(id);
     if (el && el.style) el.style.left = left;
   });
@@ -2206,6 +2284,12 @@ function render() {
     ['age-s', 'age-m', 'age-l'].forEach((c) => fx.classList.remove(c));
     fx.classList.add(ageCls);
   }
+  const sprW = $('actor-sprite-wrap'); // 立绘层同步缩放 + 情绪切图
+  if (sprW && sprW.classList) {
+    ['age-s', 'age-m', 'age-l'].forEach((c) => sprW.classList.remove(c));
+    sprW.classList.add(ageCls);
+  }
+  updateSpriteMood();
   // 情绪气泡
   if (S.needs.心情 < 25) actor.classList.add('moodlow'); else actor.classList.remove('moodlow');
   if (S.buffs.some((b) => b.name === '感冒')) actor.classList.add('sick'); else actor.classList.remove('sick');
@@ -2551,6 +2635,7 @@ function initTipPop() {
 window.addEventListener('DOMContentLoaded', () => {
   detectFlexGap();
   Sound.init();
+  spritePreload();
   // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
   const unlockAudio = () => Sound.unlock();
   ['touchstart', 'pointerdown', 'click'].forEach((ev) =>

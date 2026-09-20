@@ -990,3 +990,48 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 .supports-flex-gap #panel-right > *,
 .supports-flex-gap #event-choices > *,
 .supports-flex-gap #layout > * { margin-bottom: 0; }
+
+
+/* ==========================================================
+   立绘模式（P0：幼年 sprite，加载成功后 svg 简笔小人退场）
+   ========================================================== */
+#actor.spr-off { display: none; }
+#actor-sprite-wrap {
+  display: none;
+  position: absolute; left: 15%; bottom: 6px;
+  width: 52px; height: 70px; z-index: 2;
+  pointer-events: none;
+  transform: scale(var(--asc, 1));
+  transform-origin: 50% 100%;
+  transition: opacity .28s var(--ease-in-out-soft), left .55s var(--ease-in-out-soft);
+}
+#actor-sprite-wrap.age-s { --asc: .72; }
+#actor-sprite-wrap.age-m { --asc: .9; }
+#actor-sprite-wrap.age-l { --asc: 1.12; }
+#actor.spr-off ~ #actor-sprite-wrap { display: block; }
+#actor-sprite-bob {
+  display: flex; justify-content: center; align-items: flex-end;
+  width: 100%; height: 100%;
+  animation: actorBob 3.4s var(--ease-in-out-soft) infinite;
+}
+#actor.weak ~ #actor-sprite-wrap #actor-sprite-bob { animation: actorWeak 3.8s var(--ease-in-out-soft) infinite; }
+#actor.happy ~ #actor-sprite-wrap #actor-sprite-bob { animation-duration: 1.9s; }
+#actor-sprite {
+  height: 84px;                       /* 内容 1800/2150 → 人物实高 ≈70px */
+  transform-origin: 50% 100%;
+  transition: transform .45s var(--ease-in-out-soft);
+}
+@media (max-width: 720px) { #actor-sprite { height: 70px; } }
+
+/* 夜晚反白：整图 invert，零额外素材 */
+#scene-stage.slot-5 #actor-sprite { filter: invert(.92); }
+
+/* 无帧序列动作的 transform 表演（帧播放的位移走 translate 属性，互不干扰） */
+#actor.anim-sit ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-eat ~ #actor-sprite-wrap #actor-sprite { animation: sitBob .9s var(--ease-in-out-soft); }
+#actor.anim-stand ~ #actor-sprite-wrap #actor-sprite { animation: actorNod .95s var(--ease-in-out-soft); }
+#actor.anim-startle ~ #actor-sprite-wrap #actor-sprite { animation: startleJump .6s cubic-bezier(.3, .7, .4, 1); }
+#actor.anim-trip ~ #actor-sprite-wrap #actor-sprite { animation: tripFall 1s var(--ease-in-out-soft); }
+#actor.anim-sleep ~ #actor-sprite-wrap #actor-sprite { transform: rotate(74deg) translate(4px, 6px); }
+/* 立绘头更高，情绪气泡上移 */
+#actor.spr-off ~ #actor-fx .mb { top: -14px; }

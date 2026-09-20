@@ -38,6 +38,21 @@ const Sound = {
     this.ensure();
     if (!this.ctx) return;
     try {
+      // iOS 静音拨片会屏蔽 Web Audio（ambient 会话）：抬到 playback 通道
+      if (typeof navigator !== 'undefined' && navigator.audioSession) {
+        try { if (navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { /* iOS <17 无此 API */ }
+      }
+      // 老 iOS 兜底：循环一段近无声的 HTML 音频，把音频会话顶到媒体通道
+      if (!this._duck && typeof Audio !== 'undefined') {
+        try {
+          const a = new Audio('data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YcgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+          a.loop = true;
+          a.volume = 0.02;
+          const pr = a.play();
+          if (pr && typeof pr.catch === 'function') pr.catch(() => {});
+          this._duck = a;
+        } catch (e) { /* 忽略 */ }
+      }
       if (this._asleep()) {
         const p = this.ctx.resume();
         if (p && typeof p.then === 'function') {
@@ -46,6 +61,7 @@ const Sound = {
             const pend = this.pending;
             this.pending = null;
             if (pend && !this.muted) this.play(pend);
+            Bgm.resync(); // 背景音乐跟上
           }).catch(() => {});
         }
       }
@@ -106,6 +122,93 @@ const Sound = {
         case 'pop':     this._tone(520, 0.08, 'triangle', 0.06); break;
       }
     } catch (e) { /* 音频失败不影响游戏 */ }
+  },
+};
+
+/* ---------------- 背景音乐：八音盒版《致爱丽丝》 ----------------
+ * 贝多芬（1770-1827）作曲，早已进入公有领域；此处为 Web Audio
+ * 程序合成演奏，不涉及任何录音版权。零素材、零联网，离线可用。
+ * 与音效共用同一个已解锁的 AudioContext，锁定态自动等待。 */
+const Bgm = {
+  enabled: true,
+  timer: null,
+  idx: 0,          // 下一个待调度事件
+  loopStart: 0,    // 本轮循环在 ctx 时间轴上的起点
+  UNIT: 0.145,     // 十六分音符时长（秒），八音盒的轻快节奏
+  // 主旋律：[MIDI, 十六分音符数]，《致爱丽丝》A 段
+  MELODY: [
+    [76, 1], [75, 1], [76, 1], [75, 1], [76, 1], [71, 1], [74, 1], [72, 1],
+    [69, 2], [60, 1], [64, 1], [69, 1],
+    [68, 2], [64, 1], [68, 1], [71, 1],
+    [72, 2], [64, 1], [76, 1], [75, 1],
+    [76, 1], [75, 1], [76, 1], [71, 1], [74, 1], [72, 1],
+    [69, 2], [60, 1], [64, 1], [69, 1],
+    [68, 2], [64, 1], [72, 1], [68, 1],
+    [69, 4], [0, 2],
+  ],
+  BASS: { 8: 45, 13: 52, 18: 45, 29: 45, 34: 52, 39: 45 }, // 每小节一个轻低音（t 为旋律累计十六分单位）
+  events: [],
+  loopUnits: 0,
+  init() {
+    try { this.enabled = localStorage.getItem('fusheng_bgm') !== '0'; } catch (e) { this.enabled = true; }
+    // 展开成按时间排序的事件表
+    let t = 0;
+    this.MELODY.forEach(([m, u]) => {
+      if (this.BASS[t] !== undefined) this.events.push({ t, midi: this.BASS[t], vel: 0.035 });
+      if (m) this.events.push({ t, midi: m, vel: 0.055 });
+      t += u;
+    });
+    this.loopUnits = t;
+    this.start();
+  },
+  start() {
+    if (this.timer || typeof setInterval !== 'function') return;
+    this.timer = setInterval(() => this.tick(), 120);
+  },
+  resync() { this.loopStart = 0; this.idx = 0; }, // 解锁/回来后对齐时间轴
+  toggle() {
+    this.enabled = !this.enabled;
+    try { localStorage.setItem('fusheng_bgm', this.enabled ? '1' : '0'); } catch (e) { /* 忽略 */ }
+    if (this.enabled) { Sound.ensure(); this.resync(); this.start(); }
+    return this.enabled;
+  },
+  // 八音盒音色：基音正弦 + 高八度泛音一闪，指数衰减像钢片琴
+  _mb(midi, t, vel) {
+    const c = Sound.ctx;
+    const f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, vel, 1.6], [4, vel * 0.22, 0.3]].forEach(([mult, v, dec]) => {
+      const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f * mult;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + dec + 0.05);
+    });
+  },
+  // 前瞻调度：每次把未来 0.5s 内的音符排上时间轴
+  tick() {
+    const c = Sound.ctx;
+    if (!this.enabled || !c || !this.events.length) return;
+    try {
+      if (Sound._asleep()) return; // iOS 未解锁：等 unlock() 的 resync
+      if (!this.loopStart || this.loopStart < c.currentTime - 0.3) {
+        this.loopStart = c.currentTime + 0.08;
+        this.idx = 0;
+      }
+      const horizon = c.currentTime + 0.5;
+      while (this.idx < this.events.length) {
+        const ev = this.events[this.idx];
+        const at = this.loopStart + ev.t * this.UNIT;
+        if (at >= horizon) break;
+        this._mb(ev.midi, at, ev.vel);
+        this.idx += 1;
+        if (this.idx >= this.events.length) {
+          this.idx = 0;
+          this.loopStart += this.loopUnits * this.UNIT;
+        }
+      }
+    } catch (e) { /* 音乐失败不影响游戏 */ }
   },
 };
 
@@ -2704,19 +2807,48 @@ function initTipPop() {
 window.addEventListener('DOMContentLoaded', () => {
   detectFlexGap();
   Sound.init();
+  Bgm.init();
   spritePreload();
   // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
   const unlockAudio = () => Sound.unlock();
   ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click'].forEach((ev) =>
     window.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { Sound.unlock(); Bgm.resync(); }
+  });
   initTipPop();
   const sb = $('btn-sound');
-  sb.textContent = Sound.muted ? '🔇' : '🔊';
+  const syncSndBtn = () => { sb.textContent = Sound.muted ? '🔇' : '🔊'; };
+  syncSndBtn();
   sb.onclick = () => {
     const m = Sound.toggle();
-    sb.textContent = m ? '🔇' : '🔊';
+    syncSndBtn();
     if (!m) Sound.play('pop');
+  };
+  // 设置页：音效 / 背景音乐 两个开关
+  const settingsModal = $('modal-settings');
+  const renderSettings = () => {
+    const sfxBtn = $('set-sfx'), bgmBtn = $('set-bgm');
+    if (!sfxBtn || !bgmBtn) return;
+    sfxBtn.textContent = Sound.muted ? '音效：关' : '音效：开';
+    bgmBtn.textContent = Bgm.enabled ? '背景音乐：开' : '背景音乐：关';
+    sfxBtn.classList.toggle('on', !Sound.muted);
+    bgmBtn.classList.toggle('on', Bgm.enabled);
+  };
+  const openSettings = () => { renderSettings(); settingsModal.classList.remove('hidden'); };
+  $('btn-settings').onclick = openSettings;
+  $('btn-settings-game').onclick = openSettings;
+  $('btn-settings-close').onclick = () => settingsModal.classList.add('hidden');
+  $('set-sfx').onclick = () => {
+    const m = Sound.toggle();
+    syncSndBtn();
+    if (!m) Sound.play('pop');
+    renderSettings();
+  };
+  $('set-bgm').onclick = () => {
+    const on = Bgm.toggle();
+    if (on) Sound.play('pop');
+    renderSettings();
   };
   $('btn-born').onclick = startLife;
   // 继续上一世

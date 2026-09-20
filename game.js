@@ -135,6 +135,10 @@ const Bgm = {
   idx: 0,          // 下一个待调度事件
   loopStart: 0,    // 本轮循环在 ctx 时间轴上的起点
   UNIT: 0.14,      // 十六分音符时长（秒），流动的琶音速度
+  FILE: 'assets/audio/bgm-bwv1007-guitar.mp3', // 真实录音：BWV1007 吉他改编（网页版专属）
+  audio: null,
+  mode: 'synth',   // 'file'（录音）优先，加载失败自动回退 'synth'（八音盒）
+  _fileReady: false,
   // 前八小节琶音（每小节两组八分解，每组 8 音）：
   // C | Dm7/C | G7/B | C | Am | D7/C | G/B | C
   MELODY: [
@@ -168,7 +172,47 @@ const Bgm = {
       t += u;
     });
     this.loopUnits = t;
+    // 网页版：预载真实录音，就绪后接替八音盒
+    if (typeof Audio !== 'undefined') {
+      try {
+        const a = new Audio(this.FILE);
+        a.loop = true;
+        a.volume = 0.42;
+        a.preload = 'auto';
+        a.addEventListener('canplaythrough', () => {
+          this._fileReady = true;
+          this._tryStartFile();
+        });
+        a.addEventListener('error', () => {
+          // 录音缺席（如小红书离线包）：留在八音盒模式
+          this._fileReady = false;
+          this.audio = null;
+          this.mode = 'synth';
+        });
+        this.audio = a;
+        if (a.load) a.load();
+      } catch (e) { /* 无 Audio 环境则留在合成模式 */ }
+    }
     this.start();
+  },
+  _startFile() {
+    if (!this.audio) return;
+    this.mode = 'file';
+    if (this.audio.paused) {
+      try {
+        const p = this.audio.play();
+        if (p && typeof p.catch === 'function') p.catch(() => { this.mode = 'synth'; });
+      } catch (e) { this.mode = 'synth'; }
+    }
+  },
+  _tryStartFile() {
+    if (!this._fileReady || !this.enabled || this.mode === 'file') return;
+    // 已经解锁过（用户摸过屏幕）就立刻起播，否则等下一次手势
+    if (Sound.ctx && !Sound._asleep()) this._startFile();
+  },
+  unlock() {
+    // 在用户手势调用栈里：录音就绪则起播/切换到录音
+    if (this._fileReady && this.enabled) this._startFile();
   },
   start() {
     if (this.timer || typeof setInterval !== 'function') return;
@@ -178,7 +222,12 @@ const Bgm = {
   toggle() {
     this.enabled = !this.enabled;
     try { localStorage.setItem('fusheng_bgm', this.enabled ? '1' : '0'); } catch (e) { /* 忽略 */ }
-    if (this.enabled) { Sound.ensure(); this.resync(); this.start(); }
+    if (this.enabled) {
+      Sound.ensure(); this.resync(); this.start();
+      this._tryStartFile();
+    } else if (this.audio && !this.audio.paused) {
+      try { this.audio.pause(); } catch (e) { /* 忽略 */ }
+    }
     return this.enabled;
   },
   // 八音盒音色：基音正弦 + 高八度泛音一闪，指数衰减像钢片琴
@@ -198,7 +247,7 @@ const Bgm = {
   // 前瞻调度：每次把未来 0.5s 内的音符排上时间轴
   tick() {
     const c = Sound.ctx;
-    if (!this.enabled || !c || !this.events.length) return;
+    if (!this.enabled || !c || !this.events.length || this.mode === 'file') return;
     try {
       if (Sound._asleep()) return; // iOS 未解锁：等 unlock() 的 resync
       if (!this.loopStart || this.loopStart < c.currentTime - 0.3) {
@@ -2828,7 +2877,7 @@ window.addEventListener('DOMContentLoaded', () => {
   Bgm.init();
   spritePreload();
   // iOS 音频解锁：第一次手势（捕获阶段）里唤醒 AudioContext，之后所有音效才出得来
-  const unlockAudio = () => Sound.unlock();
+  const unlockAudio = () => { Sound.unlock(); Bgm.unlock(); };
   ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click'].forEach((ev) =>
     window.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => {

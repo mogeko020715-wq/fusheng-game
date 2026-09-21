@@ -1,5 +1,5 @@
 /* ============================================================
- * 浮生 · 众生一梦 —— 向《众生》(The Lives) 致敬的浏览器复刻
+ * 浮生 · 众生一梦
  * 黑白简笔 · 人生模拟 · 一切随机，无法存档
  * ============================================================ */
 'use strict';
@@ -125,9 +125,8 @@ const Sound = {
   },
 };
 
-/* ---------------- 背景音乐：八音盒版巴赫《十二平均律》C大调前奏曲 ----------------
- * BWV 846，巴赫（1685-1750）作曲，早已进入公有领域；此处为 Web Audio
- * 程序合成演奏，不涉及任何录音版权。零素材、零联网，离线可用。
+/* ---------------- 背景音乐：八音盒琶音循环 ----------------
+ * Web Audio 程序合成，零素材、零联网，离线可用。
  * 与音效共用同一个已解锁的 AudioContext，锁定态自动等待。 */
 const Bgm = {
   enabled: true,
@@ -135,9 +134,9 @@ const Bgm = {
   idx: 0,          // 下一个待调度事件
   loopStart: 0,    // 本轮循环在 ctx 时间轴上的起点
   UNIT: 0.14,      // 十六分音符时长（秒），流动的琶音速度
-  FILE: 'assets/audio/bgm-bwv1007-guitar.mp3', // 真实录音：BWV1007 吉他改编（网页版专属）
+  FILE: 'assets/audio/bgm-bwv1007-guitar.mp3', // 可选音频文件（网页版专属）
   audio: null,
-  mode: 'synth',   // 'file'（录音）优先，加载失败自动回退 'synth'（八音盒）
+  mode: 'synth',   // 'file'（音频文件）优先，加载失败自动回退 'synth'（八音盒）
   _fileReady: false,
   // 前八小节琶音（每小节两组八分解，每组 8 音）：
   // C | Dm7/C | G7/B | C | Am | D7/C | G/B | C
@@ -172,7 +171,7 @@ const Bgm = {
       t += u;
     });
     this.loopUnits = t;
-    // 网页版：预载真实录音，就绪后接替八音盒
+    // 网页版：预载音频文件，就绪后接替八音盒
     if (typeof Audio !== 'undefined') {
       try {
         const a = new Audio(this.FILE);
@@ -184,7 +183,7 @@ const Bgm = {
           this._tryStartFile();
         });
         a.addEventListener('error', () => {
-          // 录音缺席（如小红书离线包）：留在八音盒模式
+          // 音频文件缺席（如小红书离线包）：留在八音盒模式
           this._fileReady = false;
           this.audio = null;
           this.mode = 'synth';
@@ -211,7 +210,7 @@ const Bgm = {
     if (Sound.ctx && !Sound._asleep()) this._startFile();
   },
   unlock() {
-    // 在用户手势调用栈里：录音就绪则起播/切换到录音
+    // 在用户手势调用栈里：音频就绪则起播/切换
     if (this._fileReady && this.enabled) this._startFile();
   },
   start() {

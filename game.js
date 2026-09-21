@@ -973,7 +973,10 @@ const EVENTS = [
   },
   {
     id: 'needle', maxLife: 2, title: '打预防针', min: 3, max: 8,
-    text: '学校组织打预防针。队伍排得老长，里面传来小孩此起彼伏的哭声。',
+    cond: (s) => s.flags.wentSchool, // 「学校组织」需已入学（7 岁起）
+    text: (s) => ((s.flags.evCount || {}).needle || 0) > 1
+      ? '学校组织体检，最后一项是抽血。你看着前排同学伸出的胳膊，默默攥紧了自己的袖子。'
+      : '学校组织打预防针。队伍排得老长，里面传来小孩此起彼伏的哭声。',
     choices: [
       { t: '咬着牙忍住（体质检定）', check: { attr: '体质', dc: 50 }, ok: { 体质: 2, 心情: 5, mem: '打针你没哭，护士阿姨奖励了你一颗糖。' }, fail: { 心情: -6 }, failTxt: '针还没扎你就哭了，哭完整张脸都是鼻涕。' },
       { t: '哭得比谁都大声', ok: { 心情: -3, 娱乐: 3 }, okTxt: '哭也是一种释放。' },
@@ -1000,7 +1003,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'bully', title: '高年级的「规矩」', min: 7, max: 14,
+    id: 'bully', maxLife: 2, title: '高年级的「规矩」', min: 7, max: 14,
     text: '巷口被几个高年级学生堵住了。「新来的？懂不懂规矩，交保护费。」',
     choices: [
       { t: '练家子，直接放倒（武术傍身）', cond: (s) => (s.skills.武术 || { lvl: 0 }).lvl >= 3, ok: { 体质: 2, 魅力: 2, 心情: 10, mem: '练过的身手派上了用场。从那以后，巷口没人再拦你。' }, okTxt: '三下五除二，对面落荒而逃。你拍拍手，像做了件小事。' },
@@ -1061,7 +1064,7 @@ const EVENTS = [
     choices: [
       { t: '蒙着被子装睡', ok: { 心情: -8, 娱乐: -5 }, okTxt: '你一整夜没睡好。' },
       { t: '起来给他们倒两杯水', ok: { 魅力: 1.5, 心情: 2, mem: '争吵声在你端水出来的那一刻停了。那晚之后，家里安静了很久。' } },
-      { t: '用画画/弹琴盖过那些声音（艺术检定）', check: { attr: '魅力', dc: 68 }, ok: { 心情: 5, skill: { name: '艺术', xp: 4 } }, fail: { 心情: -5 }, failTxt: '你的手在抖，画不出一条直线。' },
+      { t: '用画画/弹琴盖过那些声音（艺术检定）', check: { attr: '魅力', dc: 68 }, ok: (s) => s.flags.art ? { 心情: 5, skill: { name: s.flags.art, xp: 4 } } : { 心情: 5 }, fail: { 心情: -5 }, failTxt: '你的手在抖，画不出一条直线。' },
     ],
   },
   {
@@ -1084,7 +1087,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'notes', title: '借笔记的人', min: 10, max: 16,
+    id: 'notes', maxLife: 1, title: '借笔记的人', min: 10, max: 16,
     cond: (s) => s.flags.wentSchool,
     text: '下课时，班里最好看的那个同学站到你桌前：「那个……能借你的笔记看看吗？」',
     choices: [
@@ -1110,7 +1113,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'goldfish', title: '金鱼的葬礼', min: 3, max: 8,
+    id: 'goldfish', maxLife: 1, title: '金鱼的葬礼', min: 5, max: 8,
     cond: (s) => s.familyKey !== 'poor' && s.location === 'home',
     text: '鱼缸里那条你喂了两年的金鱼，今天肚皮朝上浮在水面上，一动也不动。',
     choices: [
@@ -1119,7 +1122,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'tv', title: '动画片与作业', min: 5, max: 12,
+    id: 'tv', title: '动画片与作业', min: 7, max: 12,
     cond: (s) => s.location === 'home',
     text: '客厅里电视机正放着你最爱看的动画片，声音勾得你心痒痒。书包里，作业还一个字没动。',
     choices: [
@@ -1136,8 +1139,8 @@ const EVENTS = [
     ],
   },
   {
-    id: 'cook-help', title: '灶台边的学问', min: 5, max: 14,
-    cond: (s) => s.location === 'home',
+    id: 'cook-help', maxLife: 1, title: '灶台边的学问', min: 5, max: 14,
+    cond: (s) => s.location === 'home' && !s.skills.烹饪, // 「人生第一道菜」只属于没碰过锅的人
     text: '厨房里热气腾腾。大人忙着做饭，见你在旁边张望，笑道：「想学学？来，搭把手。」',
     choices: [
       { t: '系上小围裙认真学', ok: { skill: { name: '烹饪', xp: 6 }, 心情: 6, mem: '你在灶台边学会了人生的第一道菜。' } },
@@ -1146,10 +1149,10 @@ const EVENTS = [
   },
   {
     id: 'luckydraw', title: '广场抽奖摊', min: 6, max: 16,
-    cond: (s) => s.location === 'square' && s.money >= 2,
+    cond: (s) => s.location === 'square' && s.money >= 5,
     text: '广场上新摆了个抽奖摊，五块钱一次，大奖是一辆崭新的自行车。摊主笑得很热情。',
     choices: [
-      { t: '来一抽！', ok: {}, okTxt: chance(0.25) ? '居然真的中了三等奖——一只铁皮青蛙！你高兴了一整天。' : '谢谢惠顾。摊主收走你的五块钱，笑容更热情了。' },
+      { t: '来一抽！', ok: { money: -5 }, okTxt: () => chance(0.25) ? '居然真的中了三等奖——一只铁皮青蛙！你高兴了一整天。' : '谢谢惠顾。摊主收走你的五块钱，笑容更热情了。' },
       { t: '转身离开', ok: { 心情: 1 }, okTxt: '你总觉得那笑容里有什么不对劲。后来你听说好几个同学上了当。' },
     ],
   },
@@ -1191,7 +1194,7 @@ const EVENTS = [
   },
   /* ---- 技艺开花：练出来的本事，会自己长出故事 ---- */
   {
-    id: 'olympiad', title: '奥赛选拔', min: 11, max: 16,
+    id: 'olympiad', maxLife: 1, title: '奥赛选拔', min: 11, max: 16,
     cond: (s) => s.flags.wentSchool && (s.skills.编程 || { lvl: 0 }).lvl >= 3,
     text: '信息课老师把你叫到办公室，推过来一张报名表：「市里奥赛选拔，我推荐了你。去试试？」',
     choices: [
@@ -1200,7 +1203,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'newyear-dinner', title: '年夜饭', min: 9, max: 17, weight: 0.6,
+    id: 'newyear-dinner', maxLife: 1, title: '年夜饭', min: 9, max: 17, weight: 0.6,
     cond: (s) => s.location === 'home' && (s.skills.烹饪 || { lvl: 0 }).lvl >= 3,
     text: '除夕临近，厨房里的年味一天比一天浓。妈妈擦着手回头看你：「今年年夜饭，要不要你来露一手？」',
     choices: [
@@ -1259,7 +1262,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'poor-bottles', title: '捡瓶子换糖', min: 6, max: 10, weight: 2,
+    id: 'poor-bottles', maxLife: 2, title: '捡瓶子换糖', min: 6, max: 10, weight: 2,
     cond: (s) => s.familyKey === 'poor',
     text: '放学路上，你看见奶奶在翻垃圾桶捡饮料瓶。她说，攒一袋子能卖两块多。\n有同学正好经过，朝这边看了一眼。',
     choices: [
@@ -1304,7 +1307,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'mid-cram', title: '补习班风波', min: 8, max: 14, weight: 2,
+    id: 'mid-cram', maxLife: 2, title: '补习班风波', min: 8, max: 14, weight: 2,
     cond: (s) => s.familyKey === 'middle',
     text: '妈妈宣布：给你报了周末数学补习班，「别人家孩子都在补，咱不能掉队。」\n你的周末，眼看要没了。',
     choices: [
@@ -1349,7 +1352,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'rich-treat', title: '请客风波', min: 7, max: 12, weight: 2,
+    id: 'rich-treat', maxLife: 1, title: '请客风波', min: 7, max: 12, weight: 2,
     cond: (s) => s.familyKey === 'rich',
     text: '你零花钱多，总请同学吃零食，身边围着的人越来越多。\n今天你忘了带钱，围着你的人一下子散了大半。只有同桌小胖，把自己的辣条分了你一半。',
     choices: [
@@ -1364,7 +1367,7 @@ const EVENTS = [
 
   /* ---- 同桌小胖 ---- */
   {
-    id: 'bond-pang-1', title: '桌上的三八线', min: 6, max: 8, weight: 3,
+    id: 'bond-pang-1', title: '桌上的三八线', min: 7, max: 8, weight: 3,
     cond: (s) => s.flags.bond === 'pang' && !s.flags['seen:bond-pang-1'],
     text: '开学排座位，你和班里最圆的小胖同桌。课桌中间不知谁先画了一道三八线，可小胖的胳膊肘总是过界，霸占你半块橡皮的地盘。',
     choices: [
@@ -1897,7 +1900,7 @@ const MILESTONES = {
   },
   15: {
     id: 'm15', title: '中考',
-    text: '中考三天，考场上安静得能听见笔尖的沙沙声。你写完了最后一门，交卷铃响起的那一刻，心里空落落的。\n成绩揭晓：你考上了『重点高中』',
+    text: '中考三天，考场上安静得能听见笔尖的沙沙声。你写完了最后一门，交卷铃响起的那一刻，心里空落落的。\n放榜的日子到了——',
     dynamic: (s) => {
       const score = s.attrs.智力 + s.needs.心情 * 0.15 + rand(0, 20) + (((s.skills.编程 || { lvl: 0 }).lvl >= 4) ? 6 : 0);
       if (score >= 98) { s.exam = '重点高中'; return { title: '中考 · 金榜题名', okTxt: '重点高中！你盯着录取通知看了很久，手都有点抖。' }; }
@@ -1955,7 +1958,7 @@ function checkBondArc() {
   const b = S.flags.bond;
   if (!b) return;
   const steps = [
-    { age: 6, id: `bond-${b}-1` },
+    { age: b === 'pang' ? 7 : 6, id: `bond-${b}-1` }, // 小胖第一幕是开学同桌，对齐 7 岁入学
     { age: 11, id: `bond-${b}-2` },
     { age: 16, a: `bond-${b}-3a`, b: `bond-${b}-3b` },
   ];
@@ -2032,8 +2035,15 @@ function drawEvent() {
     return true;
   });
   if (!pool.length) return null;
-  pool.sort((a, b) => (b.weight || 1) - (a.weight || 1));
-  return pick(pool);
+  // 加权随机：weight 真正决定出场率（暗线/分岔重头戏高频，日常降权）
+  let total = 0;
+  pool.forEach((e) => { total += e.weight || 1; });
+  let r = Math.random() * total;
+  for (const e of pool) {
+    r -= e.weight || 1;
+    if (r <= 0) return e;
+  }
+  return pool[pool.length - 1];
 }
 
 function openEvent(ev, isMilestone = false) {
@@ -2081,10 +2091,12 @@ let pendingAnim = null; // 事件弹窗关闭后要播的小人动画
 function resolveChoice(ev, c, isMilestone) {
   $('event-choices').classList.add('hidden');
   const pass = checkPass(c.check);
-  const eff = pass ? c.ok : (c.fail || {});
+  const effRaw = pass ? c.ok : (c.fail || {});
+  const eff = typeof effRaw === 'function' ? effRaw(S) : effRaw; // 支持动态奖励（按当前状态决定给哪门技艺）
   applyEffects(eff);
   pendingAnim = pass ? (eff && eff.mem ? 'celebrate' : null) : (c.fail ? 'trip' : null);
   let txt = pass ? (c.okTxt || (eff && eff.mem ? '……' : '')) : (c.failTxt || '');
+  if (typeof txt === 'function') txt = txt(S); // 支持动态文案（如抽奖每次现掷结果）
   if (!txt) txt = pass ? '（什么事也没有发生。）' : '（失败了。）';
   if (!pass && c.fail && c.fail.mem) txt = c.fail.mem + '\n' + txt;
   $('event-result-text').textContent = txt;

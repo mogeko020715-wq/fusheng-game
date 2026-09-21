@@ -578,6 +578,9 @@ h3 {
 /* ---------- 设置页 ---------- */
 .settings-toggle { display: block; width: 100%; margin: 8px 0; letter-spacing: .2em; }
 .settings-toggle.on { background: var(--ink); color: var(--paper); }
+.settings-vol { display: flex; align-items: center; margin: 2px 0 10px; }
+.settings-vol span { font-size: 12px; color: var(--ink-soft, #666); letter-spacing: .15em; margin-right: 10px; white-space: nowrap; }
+.settings-vol input[type="range"] { flex: 1; min-width: 0; accent-color: var(--ink); }
 .settings-note { font-size: 12px; line-height: 1.7; margin: 12px 0 14px; }
 #log p:first-child { animation: logIn .5s var(--ease-out-soft); }
 @keyframes logIn {

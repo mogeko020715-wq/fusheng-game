@@ -19,9 +19,15 @@ const round1 = (v) => Math.round(v * 10) / 10;
 const Sound = {
   ctx: null,
   muted: false,
+  volume: 1,       // 音效音量 0-1，设置页滑条控制
   pending: null,   // iOS 解锁前被吞掉的最近一声，解锁后补播
   init() {
     try { this.muted = localStorage.getItem('fusheng_muted') === '1'; } catch (e) { this.muted = false; }
+    try { const v = parseFloat(localStorage.getItem('fusheng_sfx_vol')); if (!isNaN(v)) this.volume = v; } catch (e) { /* 忽略 */ }
+  },
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v));
+    try { localStorage.setItem('fusheng_sfx_vol', String(this.volume)); } catch (e) { /* 忽略 */ }
   },
   ensure() {
     if (this.ctx || typeof window === 'undefined') return;
@@ -79,6 +85,7 @@ const Sound = {
   },
   _noise(dur, freq, q, gainV, sweepTo) {
     const c = this.ctx;
+    gainV = gainV * this.volume;
     const len = Math.max(1, Math.floor(c.sampleRate * dur));
     const buf = c.createBuffer(1, len, c.sampleRate);
     const d = buf.getChannelData(0);
@@ -93,6 +100,7 @@ const Sound = {
   },
   _tone(freq, dur, type, gainV, delay = 0) {
     const c = this.ctx;
+    gainV = gainV * this.volume;
     const o = c.createOscillator(); o.type = type; o.frequency.value = freq;
     const g = c.createGain();
     const t = c.currentTime + delay;
@@ -130,6 +138,7 @@ const Sound = {
  * 与音效共用同一个已解锁的 AudioContext，锁定态自动等待。 */
 const Bgm = {
   enabled: true,
+  volume: 1,       // 音乐音量 0-1，设置页滑条控制；file 模式乘在 audio.volume 上，synth 模式乘在音符力度上
   timer: null,
   idx: 0,          // 下一个待调度事件
   loopStart: 0,    // 本轮循环在 ctx 时间轴上的起点
@@ -163,6 +172,7 @@ const Bgm = {
   loopUnits: 0,
   init() {
     try { this.enabled = localStorage.getItem('fusheng_bgm') !== '0'; } catch (e) { this.enabled = true; }
+    try { const v = parseFloat(localStorage.getItem('fusheng_bgm_vol')); if (!isNaN(v)) this.volume = v; } catch (e) { /* 忽略 */ }
     // 展开成按时间排序的事件表；每组琶音的首音略重，像指尖落在拍点上
     let t = 0;
     this.MELODY.forEach(([m, u], i) => {
@@ -176,9 +186,11 @@ const Bgm = {
       try {
         const a = new Audio(this.FILE);
         a.loop = true;
-        a.volume = 0.42;
+        a.volume = 0.42 * this.volume;
         a.preload = 'auto';
-        a.addEventListener('canplaythrough', () => {
+        // 用 canplay 而非 canplaythrough：后者要等几乎整首缓存完（5MB 弱网下延迟几十秒），
+        // canplay 缓冲几秒即可流式起播，边播边缓冲
+        a.addEventListener('canplay', () => {
           this._fileReady = true;
           this._tryStartFile();
         });
@@ -218,6 +230,11 @@ const Bgm = {
     this.timer = setInterval(() => this.tick(), 120);
   },
   resync() { this.loopStart = 0; this.idx = 0; }, // 解锁/回来后对齐时间轴
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v));
+    if (this.audio) { try { this.audio.volume = 0.42 * this.volume; } catch (e) { /* 忽略 */ } }
+    try { localStorage.setItem('fusheng_bgm_vol', String(this.volume)); } catch (e) { /* 忽略 */ }
+  },
   toggle() {
     this.enabled = !this.enabled;
     try { localStorage.setItem('fusheng_bgm', this.enabled ? '1' : '0'); } catch (e) { /* 忽略 */ }
@@ -232,6 +249,7 @@ const Bgm = {
   // 八音盒音色：基音正弦 + 高八度泛音一闪，指数衰减像钢片琴
   _mb(midi, t, vel) {
     const c = Sound.ctx;
+    vel = vel * this.volume;
     const f = 440 * Math.pow(2, (midi - 69) / 12);
     [[1, vel, 1.6], [4, vel * 0.22, 0.3]].forEach(([mult, v, dec]) => {
       const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f * mult;
@@ -3173,6 +3191,17 @@ window.addEventListener('DOMContentLoaded', () => {
     if (on) Sound.play('pop');
     renderSettings();
   };
+  // 音量滑条：实时生效并持久化
+  const sfxVol = $('set-sfx-vol'), bgmVol = $('set-bgm-vol');
+  if (sfxVol) {
+    sfxVol.value = Math.round(Sound.volume * 100);
+    sfxVol.addEventListener('input', () => Sound.setVolume(sfxVol.value / 100));
+    sfxVol.addEventListener('change', () => Sound.play('pop')); // 松手试音
+  }
+  if (bgmVol) {
+    bgmVol.value = Math.round(Bgm.volume * 100);
+    bgmVol.addEventListener('input', () => Bgm.setVolume(bgmVol.value / 100));
+  }
   $('btn-born').onclick = startLife;
   // 继续上一世
   const bc = $('btn-continue');

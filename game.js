@@ -368,36 +368,43 @@ function actorAnim(name, prop) {
 }
 
 /* ---------------- 立绘模式：线稿 sprite 接管简笔小人 ----------------
- * 全部帧加载成功才启用（给 svg#actor 加 spr-off，CSS 兄弟选择器显示立绘层），
- * 任何一张失败就保持 SVG 简笔小人，天然回退 */
+ * 7 张静态帧加载成功即启用（给 svg#actor 加 spr-off，CSS 兄弟选择器显示立绘层）；
+ * 动作帧后台慢加载，缺席的帧播放时自动回退站姿；stand 都加载不到就保持 SVG 简笔小人。
+ * 每张图最多 4 次尝试（递增间隔 + 缓存穿透），整体失败会在 startLife 时重试——
+ * 针对弱网/移动网络：18 帧全量一次性加载的 all-or-nothing 太容易整组阵亡 */
 const SPRITE_DIR = 'assets/actor/sprites/';
 const SPRITE_SETS = {
   walk: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
   jump: ['jump-1', 'jump-2', 'jump-3', 'jump-4', 'jump-5'],
 };
-const spriteSt = { ready: false, busy: false, timer: null };
+const SPRITE_STATIC = ['stand', 'happy', 'weak', 'sick', 'sit', 'eat', 'sleep'];
+const spriteSt = { ready: false, busy: false, timer: null, loading: false };
 const spriteCache = {};
 
+function spriteLoadOne(n, done) {
+  const im = new Image();
+  let tries = 0;
+  const attempt = () => { im.src = SPRITE_DIR + n + '.png' + (tries ? '?r' + tries : ''); };
+  im.onload = () => done(true);
+  im.onerror = () => {
+    if (tries < 3) { tries++; setTimeout(attempt, 700 * tries * tries); } // 0.7s / 2.8s / 6.3s
+    else done(false);
+  };
+  attempt();
+  spriteCache[n] = im;
+}
 function spritePreload() {
-  const names = ['stand', 'happy', 'weak', 'sick', 'sit', 'eat', 'sleep'].concat(SPRITE_SETS.walk, SPRITE_SETS.jump);
-  let left = names.length;
-  let dead = false;
-  names.forEach((n) => {
-    const im = new Image();
-    let retried = false;
-    im.onload = () => { if (!dead && --left === 0) spriteEnable(); };
-    im.onerror = () => {
-      // 移动网络偶发丢图：隔 1.2s 重试一次，再失败才整体回退 SVG
-      if (!retried) {
-        retried = true;
-        setTimeout(() => { im.src = SPRITE_DIR + n + '.png'; }, 1200);
-      } else {
-        dead = true;
-      }
-    };
-    im.src = SPRITE_DIR + n + '.png';
-    spriteCache[n] = im;
-  });
+  if (spriteSt.loading || spriteSt.ready) return;
+  if (typeof Image === 'undefined') return; // 非浏览器环境（测试桩）直接跳过
+  spriteSt.loading = true;
+  let left = SPRITE_STATIC.length;
+  SPRITE_STATIC.forEach((n) => spriteLoadOne(n, () => {
+    if (--left > 0) return;
+    spriteSt.loading = false;
+    if (spriteCache.stand && spriteCache.stand.naturalWidth > 0) spriteEnable();
+    // stand 也没到手：保持 SVG 简笔小人，等 startLife 再试
+  }));
+  SPRITE_SETS.walk.concat(SPRITE_SETS.jump).forEach((n) => spriteLoadOne(n, () => {}));
 }
 function spriteEnable() {
   spriteSt.ready = true;
@@ -407,10 +414,13 @@ function spriteEnable() {
 }
 function spriteSet(name) {
   const el = $('actor-sprite');
-  if (!el || !spriteCache[name]) return;
+  if (!el) return;
+  let im = spriteCache[name];
+  if (!im || !im.naturalWidth) { name = 'stand'; im = spriteCache.stand; } // 缺席帧回退站姿
+  if (!im || !im.naturalWidth) return;
   if (el.dataset.cur !== name) {
     el.dataset.cur = name;
-    el.src = spriteCache[name].src;
+    el.src = im.src;
   }
 }
 /* 情绪 → 静态帧：感冒 sick、虚弱/低落 weak，心情≥80 用 happy，其余 stand */
@@ -3010,6 +3020,7 @@ function endLife(cause) {
  * ============================================================ */
 function startLife() {
   newLife();
+  spritePreload(); // 首屏预载若被弱网打败，开新一世时再试一次
   clearSave(); // 新的一世，旧的存档让位
   milestoneQueue = [];
   checkMilestones();

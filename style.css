@@ -1036,7 +1036,7 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 #actor-sprite-wrap.age-s { --asc: .72; }
 #actor-sprite-wrap.age-m { --asc: .9; }
 #actor-sprite-wrap.age-l { --asc: 1.12; }
-#actor.spr-off ~ #actor-sprite-wrap { display: block; }
+#actor.spr-off ~ #actor-sprite-wrap { display: block; pointer-events: auto; cursor: pointer; }
 #actor-sprite-bob {
   display: flex; justify-content: center; align-items: flex-end;
   width: 100%; height: 100%;

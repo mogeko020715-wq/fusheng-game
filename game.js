@@ -343,8 +343,6 @@ function actorAnim(name, prop) {
   const a = $('actor');
   if (!a || !a.classList) return;
   a.classList.remove('ps-sit', 'ps-lie');
-  if (name === 'sit' || name === 'eat') a.classList.add('ps-sit');
-  if (name === 'sleep') a.classList.add('ps-lie');
   ANIM_CLASSES.forEach((c) => a.classList.remove(c));
   PROP_CLASSES.forEach((c) => a.classList.remove(c));
   // 立绘已启用：帧序列动作直接播帧（走路/跑步共用 walk 六帧，跳跃/庆祝用 jump 五帧）
@@ -357,6 +355,8 @@ function actorAnim(name, prop) {
     else if (name === 'sit') spriteHold('sit', 1600);
     else if (spriteSt.busy) spriteStop(); // 其它动作打断帧播放，交给 CSS 表演
   }
+  if (name === 'sit' || name === 'eat') a.classList.add('ps-sit'); // SVG 简笔姿态（仅回退模式可见）
+  if (name === 'sleep') a.classList.add('ps-lie');
   a.classList.add('anim-' + name);
   if (prop) a.classList.add('p-' + prop);
   clearTimeout(actorAnim._t);
@@ -2932,20 +2932,21 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   $('btn-memorial').onclick = () => { renderMemorials(); $('modal-memorial').classList.remove('hidden'); };
   $('btn-memorial-close').onclick = () => $('modal-memorial').classList.add('hidden');
-  // 戳一戳小人
-  const actorEl = $('actor');
-  if (actorEl && actorEl.addEventListener) {
-    actorEl.addEventListener('click', () => {
-      if (!S || !S.alive || eventLock) return;
-      if ($('screen-game').classList.contains('hidden')) return;
-      Sound.play('pop');
-      actorAnim('startle');
-      if (chance(0.35)) {
-        addLog(pick(['你戳了戳自己。疼。', '你冲自己做了个鬼脸，把自己逗笑了。', '你原地蹦了一下，心情莫名好了点。']));
-        render();
-      }
-    });
-  }
+  // 戳一戳小人（简笔 svg 与立绘层都挂：立绘模式下 svg 隐藏点不到）
+  const poke = () => {
+    if (!S || !S.alive || eventLock) return;
+    if ($('screen-game').classList.contains('hidden')) return;
+    Sound.play('pop');
+    actorAnim('startle');
+    if (chance(0.35)) {
+      addLog(pick(['你戳了戳自己。疼。', '你冲自己做了个鬼脸，把自己逗笑了。', '你原地蹦了一下，心情莫名好了点。']));
+      render();
+    }
+  };
+  ['actor', 'actor-sprite-wrap'].forEach((id) => {
+    const el = $(id);
+    if (el && el.addEventListener) el.addEventListener('click', poke);
+  });
   // 场景三层视差：远慢近快，跟着鼠标轻轻晃
   const stageEl = $('scene-stage');
   const finePointer = typeof window.matchMedia === 'function' &&

@@ -171,6 +171,9 @@ const Bgm = {
   events: [],
   loopUnits: 0,
   init() {
+    // 容器无音频文件白名单的构建（小红书小工具）：整体关闭背景音乐并隐藏设置项
+    this.noBgm = typeof window !== 'undefined' && !!window.FUSHENG_NO_BGM;
+    if (this.noBgm) { this.enabled = false; return; }
     try { this.enabled = localStorage.getItem('fusheng_bgm') !== '0'; } catch (e) { this.enabled = true; }
     try { const v = parseFloat(localStorage.getItem('fusheng_bgm_vol')); if (!isNaN(v)) this.volume = v; } catch (e) { /* 忽略 */ }
     // 展开成按时间排序的事件表；每组琶音的首音略重，像指尖落在拍点上
@@ -236,6 +239,7 @@ const Bgm = {
     try { localStorage.setItem('fusheng_bgm_vol', String(this.volume)); } catch (e) { /* 忽略 */ }
   },
   toggle() {
+    if (this.noBgm) return false; // 无背景音乐构建：开关不存在
     this.enabled = !this.enabled;
     try { localStorage.setItem('fusheng_bgm', this.enabled ? '1' : '0'); } catch (e) { /* 忽略 */ }
     if (this.enabled) {
@@ -3175,6 +3179,12 @@ window.addEventListener('DOMContentLoaded', () => {
     bgmBtn.textContent = Bgm.enabled ? '背景音乐：开' : '背景音乐：关';
     sfxBtn.classList.toggle('on', !Sound.muted);
     bgmBtn.classList.toggle('on', Bgm.enabled);
+    // 无背景音乐构建（小红书小工具）：隐藏音乐开关与音乐音量条
+    if (Bgm.noBgm) {
+      bgmBtn.classList.add('hidden');
+      const bv = $('set-bgm-vol');
+      if (bv && bv.parentNode) bv.parentNode.classList.add('hidden');
+    }
   };
   const openSettings = () => { renderSettings(); settingsModal.classList.remove('hidden'); };
   $('btn-settings').onclick = openSettings;

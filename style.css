@@ -692,7 +692,7 @@ h3 {
 /* ==========================================================
    移动端适配（≤720px）
    ========================================================== */
-@media (max-width: 720px) {
+@media (max-width: 720px), (orientation: landscape) and (max-height: 540px) and (max-width: 1000px) {
   .screen { padding: 16px 10px; }
   .start-inner, .end-inner { padding: 26px 18px; }
   .game-title { font-size: 34px; }
@@ -738,8 +738,8 @@ h3 {
   .needs-box h3 { grid-column: 1 / -1; }
   .need-row { margin: 5px 0; font-size: 13px; }
 
-  /* 岁月日志矮一些 */
-  #log { height: 170px; font-size: 13px; }
+  /* 岁月大框移除：字幕条 + 底部抽屉保留全部日志 */
+  .log-box { display: none; }
 
   /* 事件弹窗 */
   .modal { padding: 12px; }
@@ -804,16 +804,39 @@ h3 {
   #sheet-log-body .log-day { color: var(--accent); font-weight: bold; }
   #sheet-log-body .log-sys { color: var(--gray); }
 
-  /* 资质栏折叠成一行摘要，点击展开 */
-  #attrs-toggle {
-    display: block; width: 100%;
-    font-family: inherit; font-size: 14px; text-align: center;
-    background: #fff; color: var(--ink); cursor: pointer;
-    border: 1.5px solid var(--ink); border-radius: 12px 4px 12px 4px;
-    padding: 6px 10px; margin-bottom: 4px;
+  /* 角色卡合并：资质栏常显，与身心拼成一张卡（删掉的日志框位置由它顶上） */
+  #attrs-toggle { display: none !important; }
+  .needs-box { border-bottom: none; border-radius: 14px 14px 4px 4px; box-shadow: none; }
+  #panel-right > .needs-box { margin-bottom: 0; } /* 覆盖基线 margin-bottom:14px，否则拼卡留缝 */
+  #panel-left { margin-top: -10px; border-radius: 4px 4px 14px 14px; }
+  #attrs-body { display: flex !important; flex-wrap: wrap; gap: 2px 12px; }
+  #attrs-body h3 { flex: 1 1 100%; margin: 10px 0 4px; }
+  #attrs-body .attr-row {
+    flex: 1 1 26%; margin: 4px 0;
+    display: grid; grid-template-columns: auto auto; justify-content: space-between; align-items: center;
   }
-  #attrs-body { display: none; }
-  #panel-left.open #attrs-body { display: block; }
+  #attrs-body .attr-row .attr-name { grid-column: 1; grid-row: 1; }
+  #attrs-body .attr-row .attr-num { grid-column: 2; grid-row: 1; }
+  #attrs-body .attr-row .bar { grid-column: 1 / -1; grid-row: 2; margin-top: 3px; }
+  #attrs-body #aptitude-box, #attrs-body .tag-list { flex: 1 1 100%; }
+}
+
+/* ---------- 横屏自适应增强（手机横握即触发，不强制旋转）：左场景右角色卡 ---------- */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1000px) {
+  #layout { display: grid; grid-template-columns: minmax(0, 57fr) minmax(0, 43fr); gap: 10px; align-items: start; }
+  #panel-center { grid-column: 1; grid-row: 1 / span 2; }
+  #panel-right { grid-column: 2; grid-row: 1; }
+  #panel-left { grid-column: 2; grid-row: 2; }
+  /* 跨行 grid 的行高由最长列分配，拼卡负 margin 会漂移：横屏右列放弃拼接，恢复标准独立卡片 */
+  #panel-left { margin-top: 0; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; }
+  .needs-box {
+    border-bottom: 2px solid var(--ink);
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 3px 4px 0 var(--shadow);
+  }
+  #scene-stage { height: calc(100vh - 190px); min-height: 170px; }
+  #scene-art svg { height: calc(100vh - 235px); min-height: 125px; }
+  #scene-art .lyr-far svg { height: calc(100vh - 250px); min-height: 110px; }
 }
 
 /* ---------- 心愿与人生图鉴 ---------- */

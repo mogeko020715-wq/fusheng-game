@@ -823,7 +823,7 @@ h3 {
 
 /* ---------- 横屏自适应增强（手机横握即触发，不强制旋转）：左场景右角色卡 ---------- */
 @media (orientation: landscape) and (max-height: 540px) and (max-width: 1000px) {
-  #layout { display: grid; grid-template-columns: minmax(0, 57fr) minmax(0, 43fr); gap: 10px; align-items: start; }
+  #layout { display: grid; grid-template-columns: minmax(0, 57fr) minmax(0, 43fr); grid-gap: 10px; align-items: start; }
   #panel-center { grid-column: 1; grid-row: 1 / span 2; }
   #panel-right { grid-column: 2; grid-row: 1; }
   #panel-left { grid-column: 2; grid-row: 2; }
@@ -1073,3 +1073,10 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 #actor.anim-sleep ~ #actor-sprite-wrap #actor-sprite { animation: lieDown 2.3s var(--ease-in-out-soft); }
 /* 立绘头更高，情绪气泡上移 */
 #actor.spr-off ~ #actor-fx .mb { top: -28px; }
+
+/* 角色卡三列（移动端）：Chrome 61 无 flex gap 时给属性行补横向间距；
+   用 :not(.supports-flex-gap) 反向门控，不影响现代浏览器的既有 margin 设计 */
+@media (max-width: 720px) {
+  html:not(.supports-flex-gap) #attrs-body .attr-row { margin-right: 12px; }
+  html:not(.supports-flex-gap) #attrs-body > h3 { margin-bottom: 2px; }
+}

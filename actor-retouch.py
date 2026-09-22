@@ -5,11 +5,12 @@
 3) 弱 alpha 线（weak/sick 的嘴与颤抖线）：alpha 提升 (a-10)*1.5
 直接改 sprites/（git 已存档，可回退）"""
 import os
+import sys
 import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-SRC = 'assets/actor/sprites'
+SRC = sys.argv[1] if len(sys.argv) > 1 else 'assets/actor/sprites'
 PAPER = np.array([251, 249, 243], dtype=float)
 INK = np.array([28, 28, 28], dtype=float)
 PAPER_LUM = PAPER.mean()

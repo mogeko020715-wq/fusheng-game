@@ -1061,8 +1061,13 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 
 /* 无帧序列动作的 transform 表演（帧播放的位移走 translate 属性，互不干扰） */
 #actor.anim-sit ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-chat ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-fish ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-chess ~ #actor-sprite-wrap #actor-sprite,
 #actor.anim-eat ~ #actor-sprite-wrap #actor-sprite { animation: sitBob .9s var(--ease-in-out-soft); }
-#actor.anim-stand ~ #actor-sprite-wrap #actor-sprite { animation: actorNod .95s var(--ease-in-out-soft); }
+#actor.anim-stand ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-wash ~ #actor-sprite-wrap #actor-sprite,
+#actor.anim-cook ~ #actor-sprite-wrap #actor-sprite { animation: actorNod .95s var(--ease-in-out-soft); }
 #actor.anim-startle ~ #actor-sprite-wrap #actor-sprite { animation: startleJump .6s cubic-bezier(.3, .7, .4, 1); }
 #actor.anim-trip ~ #actor-sprite-wrap #actor-sprite { animation: tripFall 1s var(--ease-in-out-soft); }
 /* 睡觉：蹲下 → 缓缓侧躺 → 躺定 → 起身回正，不再是直挺挺倒地 */

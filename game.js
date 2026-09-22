@@ -352,14 +352,14 @@ function clearHints() {
 
 /* ---------------- 简笔小人 ---------------- */
 const ACT_ANIM = {
-  meal: 'eat', sleep: 'sleep', wash: 'stand', play: 'jump', study: 'sit',
-  exercise: 'jump', chore: 'walk', art: 'sit', cook: 'stand', chat: 'sit',
-  walk: 'walk', slide: 'jump', fish: 'sit', watch: 'sit',
+  meal: 'eat', sleep: 'sleep', wash: 'wash', play: 'jump', study: 'sit',
+  exercise: 'jump', chore: 'walk', art: 'sit', cook: 'cook', chat: 'chat',
+  walk: 'walk', slide: 'jump', fish: 'fish', watch: 'sit',
   class: 'run', skip: 'run', club: 'sit',
-  book: 'walk', toy: 'jump', snack: 'eat', artist: 'stand', chess: 'sit',
+  book: 'walk', toy: 'jump', snack: 'eat', artist: 'stand', chess: 'chess',
   veg: 'walk', deli: 'eat', carry: 'walk', cure: 'stand', checkup: 'stand',
 };
-const ANIM_CLASSES = ['anim-walk', 'anim-run', 'anim-jump', 'anim-stand', 'anim-sit', 'anim-eat', 'anim-sleep', 'anim-startle', 'anim-celebrate', 'anim-trip'];
+const ANIM_CLASSES = ['anim-walk', 'anim-run', 'anim-jump', 'anim-stand', 'anim-sit', 'anim-eat', 'anim-sleep', 'anim-startle', 'anim-celebrate', 'anim-trip', 'anim-chat', 'anim-fish', 'anim-chess', 'anim-wash', 'anim-cook'];
 const PROP_CLASSES = ['p-rod', 'p-book', 'p-notes', 'p-easel', 'p-steam', 'p-bubble'];
 function actorAnim(name, prop) {
   const a = $('actor');
@@ -367,17 +367,22 @@ function actorAnim(name, prop) {
   a.classList.remove('ps-sit', 'ps-lie');
   ANIM_CLASSES.forEach((c) => a.classList.remove(c));
   PROP_CLASSES.forEach((c) => a.classList.remove(c));
-  // 立绘已启用：帧序列动作直接播帧（走路/跑步共用 walk 六帧，跳跃/庆祝用 jump 五帧）
+  // 立绘已启用：帧序列动作直接播帧（跑/走各自序列，跳跃用 jump 五帧）
   if (spriteSt.ready) {
     if (name === 'walk') { spritePlay('walk', 150, [0, -2, 0, 0, -2, 0]); return; }
-    if (name === 'run') { spritePlay('walk', 95, [0, -3, 0, 0, -3, 0]); return; }
-    if (name === 'jump' || name === 'celebrate') { spritePlay('jump', 190, [0, -8, -26, -4, 0]); return; }
+    if (name === 'run') { spritePlay('run', 95, [0, -3, 0, -3]); return; }
+    if (name === 'jump') { spritePlay('jump', 190, [0, -8, -26, -4, 0]); return; }
     if (name === 'sleep') { spriteSleep(); return; } // 蹲身→横躺帧→起身
-    if (name === 'eat') spriteHold('eat', 1600);       // 静态帧 + class 流程的 sitBob 微动叠加
+    if (name === 'eat') spriteHold('eat', 1600);       // 静态帧 + class 流程的微动叠加
     else if (name === 'sit') spriteHold('sit', 1600);
+    else if (name === 'celebrate') spriteHold('celebrate', 1600); // 专属欢呼帧，class 流程叠加跳星 fx
+    else if (name === 'trip') spriteHold('trip', 1200);
+    else if (name === 'startle') spriteHold('startle', 900);
+    else if (name === 'chat' || name === 'fish' || name === 'chess') spriteHold(name, 1600);
+    else if (name === 'wash' || name === 'cook') spriteHold(name, 1400);
     else if (spriteSt.busy) spriteStop(); // 其它动作打断帧播放，交给 CSS 表演
   }
-  if (name === 'sit' || name === 'eat') a.classList.add('ps-sit'); // SVG 简笔姿态（仅回退模式可见）
+  if (name === 'sit' || name === 'eat' || name === 'chat' || name === 'fish' || name === 'chess') a.classList.add('ps-sit'); // SVG 简笔姿态（仅回退模式可见）
   if (name === 'sleep') a.classList.add('ps-lie');
   a.classList.add('anim-' + name);
   if (prop) a.classList.add('p-' + prop);
@@ -390,16 +395,17 @@ function actorAnim(name, prop) {
 }
 
 /* ---------------- 立绘模式：线稿 sprite 接管简笔小人 ----------------
- * 7 张静态帧加载成功即启用（给 svg#actor 加 spr-off，CSS 兄弟选择器显示立绘层）；
+ * 15 张静态帧全部落定后启用（给 svg#actor 加 spr-off，CSS 兄弟选择器显示立绘层）；
  * 动作帧后台慢加载，缺席的帧播放时自动回退站姿；stand 都加载不到就保持 SVG 简笔小人。
  * 每张图最多 4 次尝试（递增间隔 + 缓存穿透），整体失败会在 startLife 时重试——
- * 针对弱网/移动网络：18 帧全量一次性加载的 all-or-nothing 太容易整组阵亡 */
+ * 针对弱网/移动网络：30 帧全量一次性加载的 all-or-nothing 太容易整组阵亡 */
 const SPRITE_DIR = 'assets/actor/sprites/';
 const SPRITE_SETS = {
   walk: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
   jump: ['jump-1', 'jump-2', 'jump-3', 'jump-4', 'jump-5'],
+  run: ['run-1', 'run-2', 'run-3', 'run-4'],
 };
-const SPRITE_STATIC = ['stand', 'happy', 'weak', 'sick', 'sit', 'eat', 'sleep'];
+const SPRITE_STATIC = ['stand', 'happy', 'weak', 'sick', 'sit', 'eat', 'sleep', 'celebrate', 'trip', 'startle', 'chat', 'fish', 'chess', 'wash', 'cook'];
 const spriteSt = { ready: false, busy: false, timer: null, loading: false };
 const spriteCache = {};
 
@@ -426,7 +432,7 @@ function spritePreload() {
     if (spriteCache.stand && spriteCache.stand.naturalWidth > 0) spriteEnable();
     // stand 也没到手：保持 SVG 简笔小人，等 startLife 再试
   }));
-  SPRITE_SETS.walk.concat(SPRITE_SETS.jump).forEach((n) => spriteLoadOne(n, () => {}));
+  SPRITE_SETS.walk.concat(SPRITE_SETS.jump, SPRITE_SETS.run).forEach((n) => spriteLoadOne(n, () => {}));
 }
 function spriteEnable() {
   spriteSt.ready = true;

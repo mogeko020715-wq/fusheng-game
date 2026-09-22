@@ -3,11 +3,12 @@
 原理：alpha 掩膜闭运算封口 → 填充孔洞 → 新增区域填纸色、alpha 拉满
 直接改 sprites/（原版已入 git 1671f47，可回退）"""
 import os
+import sys
 import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-SRC = 'assets/actor/sprites'
+SRC = sys.argv[1] if len(sys.argv) > 1 else 'assets/actor/sprites'
 PAPER = (251, 249, 243)
 
 for n in sorted(os.listdir(SRC)):

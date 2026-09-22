@@ -38,7 +38,7 @@ const driver = `
   const cnt = {};
   for (let i = 0; i < 50000; i++) { const e = drawEvent(); if (e) cnt[e.id] = (cnt[e.id] || 0) + 1; }
   const wSum = {}; let tot = 0;
-  EVENTS.filter(e => 10 >= e.min && 10 <= e.max && (!e.cond || e.cond(S))).forEach(e => { wSum[e.id] = e.weight || 1; tot += e.weight || 1; });
+  EVENTS.filter(e => 10 >= e.min && 10 <= e.max && (!e.cond || e.cond(S))).forEach(e => { wSum[e.id] = effWeight(e); tot += effWeight(e); });
   let weightOK = true;
   Object.keys(wSum).forEach(id => {
     const expect = wSum[id] / tot, actual = (cnt[id] || 0) / 50000;

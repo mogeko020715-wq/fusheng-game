@@ -626,6 +626,21 @@ const APT_LABEL = (v) => v < 0.85 ? '鲁钝' : v < 1.0 ? '平平' : v < 1.15 ? '
 const APT_ORDER = ['学习', '运动', '艺术'];
 const APT_TIP = { 学习: '影响看书与上课的智力收益', 运动: '影响锻炼与运动的体质收益', 艺术: '影响艺术练习的魅力收益' };
 
+/* 技艺等级水平描述：长按/悬停技能标签时展示（1-5 级） */
+const SKILL_LVL_DESC = {
+  绘画: ['刚会握笔涂鸦，线条歪歪扭扭。', '能画出像样的形状了，最爱画小人。', '技法小成，渐渐有了自己的风格。', '功底扎实，画作常被称赞。', '炉火纯青，落笔有神。'],
+  乐器: ['刚入门，音符还找不准。', '能磕磕绊绊奏完一整首曲子。', '演奏流畅，渐渐有了感情。', '技艺纯熟，登台也不怯场。', '人琴合一，余音绕梁。'],
+  编程: ['刚认识代码，照着书敲 hello world。', '能写点小玩意，bug 是家常便饭。', '思路清晰，独立做个小项目没问题。', '功力深厚，难题到你手里迎刃而解。', '代码如臂使指，作品已见锋芒。'],
+  武术: ['刚学扎马步，腿肚子直打哆嗦。', '套路打得有模有样。', '拳脚小成，身手矫健。', '功底扎实，寻常三五人近不了身。', '臻至化境，出手自有一派气象。'],
+  烹饪: ['刚会打下手，择菜洗碗。', '能做几道家常小菜了。', '手艺见长，全家点名要你掌勺。', '煎炒烹炸，样样拿手。', '一勺在手，百味随心。'],
+  钓鱼: ['刚学甩竿，鱼线总缠成一团。', '能钓上小鱼了，不再空手而归。', '看漂识鱼，收获渐丰。', '老手风范，在哪儿下竿心里有数。', '钓意不在鱼，山水自在心间。'],
+};
+const SKILL_LVL_GENERIC = ['初窥门径。', '渐渐上手。', '小有所成。', '技艺纯熟。', '炉火纯青。'];
+function skillDesc(name, lvl) {
+  const t = SKILL_LVL_DESC[name] || SKILL_LVL_GENERIC;
+  return t[Math.min(Math.max(lvl, 1), 5) - 1];
+}
+
 /* ---------------- 心愿 ---------------- */
 const DREAMS = {
   science: { name: '科学家', attr: '智力' },
@@ -905,7 +920,7 @@ function sleep() {
   S.slot = 5; // 直接入夜
   gainNeed('精力', 100);
   gainNeed('清洁', -6);
-  addLog('你睡着了，做了一个短短的梦。');
+  addLog(pick(['你睡着了，做了一个短短的梦。', '你沾到枕头就睡着了。', '你抱着被子滚了两圈，沉沉睡去。']));
   nextDay();
   S.slot = 0;
   if (S.alive) afterAction();
@@ -927,7 +942,7 @@ function goSchool() {
   gainNeed('娱乐', -6);
   gainNeed('心情', -3);
   if (chance(0.2)) gain('魅力', 0.4);
-  addLog(`你在${schoolName()}上了一天课。${tired ? '太累了，听课直打瞌睡。' : ''}`);
+  addLog(pick([`你在${schoolName()}上了一天课。`, `${schoolName()}的一天，从早读坐到放学。`, `你在${schoolName()}的教室里坐了一天，笔记记了半本。`]) + (tired ? '太累了，听课直打瞌睡。' : ''));
 }
 function skipSchool() {
   S.flags.skipped++;
@@ -2309,13 +2324,30 @@ function drawEvent() {
   if (!pool.length) return null;
   // 加权随机：weight 真正决定出场率（暗线/分岔重头戏高频，日常降权）
   let total = 0;
-  pool.forEach((e) => { total += e.weight || 1; });
+  pool.forEach((e) => { total += effWeight(e); });
   let r = Math.random() * total;
   for (const e of pool) {
-    r -= e.weight || 1;
+    r -= effWeight(e);
     if (r <= 0) return e;
   }
   return pool[pool.length - 1];
+}
+
+/* 有效权重 = 基础 weight × 年龄带贴合度 × 近期冷却
+ * 年龄带：事件越靠近自己年龄段的「主场」，出场率越高（最边缘 -35%）
+ * 冷却：见过的事件 8 天内压到 12%，20 天内 45%，之后恢复——长局尾段不再反复撞同一事件 */
+function effWeight(e) {
+  let w = e.weight || 1;
+  const span = Math.max((e.max - e.min) / 2, 1);
+  const dist = Math.abs(S.age - (e.min + e.max) / 2) / span; // 0=正中 1=边缘
+  w *= 1 - 0.35 * Math.min(dist, 1);
+  const seenDay = S.flags.evSeenDay && S.flags.evSeenDay[e.id];
+  if (seenDay != null) {
+    const since = S.day - seenDay;
+    if (since < 8) w *= 0.12;
+    else if (since < 20) w *= 0.45;
+  }
+  return w;
 }
 
 function openEvent(ev, isMilestone = false) {
@@ -2325,6 +2357,8 @@ function openEvent(ev, isMilestone = false) {
     S.flags['seen:' + ev.id] = true;
     S.flags.evCount = S.flags.evCount || {};
     S.flags.evCount[ev.id] = (S.flags.evCount[ev.id] || 0) + 1;
+    S.flags.evSeenDay = S.flags.evSeenDay || {};
+    S.flags.evSeenDay[ev.id] = S.day; // 冷却计时：近期见过的事件降权
   }
   if (isMilestone) Sound.play('chime');
   $('modal-event').classList.remove('hidden');
@@ -2592,45 +2626,59 @@ const ACTIONS = [
   /* ---- 家 ---- */
   { id: 'meal', loc: 'home', label: '吃饭', cond: () => MEAL_SLOTS.includes(S.slot), run: eatMeal },
   { id: 'sleep', loc: 'home', label: '睡觉', cond: () => true, run: sleep },
-  { id: 'wash', loc: 'home', label: '洗漱', cond: () => true, run: () => { gainNeed('清洁', 42); gainNeed('心情', 2); addLog('你把自己洗得干干净净。'); } },
+  { id: 'wash', loc: 'home', label: '洗漱', cond: () => true, run: () => { gainNeed('清洁', 42); gainNeed('心情', 2); addLog(pick(['你把自己洗得干干净净。', '水龙头哗哗响，你对着镜子做了个鬼脸。', '洗完浑身清爽，像换了一层皮。'])); } },
   { id: 'play', loc: 'home', label: '玩耍', cond: () => true, run: () => {
       const bonus = S.familyKey === 'rich' ? 6 : 0;
       gainNeed('娱乐', 26 + bonus); gainNeed('心情', 7);
-      addLog(S.familyKey === 'rich' ? '你在堆成山的玩具里玩了个痛快。' : '一个旧皮球，你也能玩出百般花样。');
+      if (S.familyKey === 'rich') addLog(pick(['你在堆成山的玩具里玩了个痛快。', '新到的玩具套装，你拆了一下午。', '你把玩具摆了一地，自导自演了一出大戏。']));
+      else if (S.age <= 6) addLog(pick(['一个旧皮球，你也能玩出百般花样。', '你搭了一座积木城堡，又亲手推倒，咯咯直笑。', '你抱着布偶说了一下午悄悄话。']));
+      else if (S.age <= 12) addLog(pick(['玻璃弹珠在地上滚来滚去，你赢了隔壁小孩三颗。', '一副纸牌，你和自己对战了一下午。', '跳皮筋、丢沙包、翻花绳，一样都没落下。']));
+      else addLog(pick(['你约同学打了场球，汗出透了，痛快。', '你窝在角落打游戏，一关又一关。', '你翻出旧漫画重看，还是笑得前仰后合。']));
     } },
   { id: 'study', loc: 'home', label: '看书学习', cond: () => true, run: () => {
       let g = 1.2 * S.apt.学习;
       if (S.needs.娱乐 < 20) { g *= 0.5; addLog('一直学习有点无聊，效率不高。', 'sys'); }
       gain('智力', g); gainNeed('娱乐', -6); gainNeed('精力', -3);
-      addLog('你伏案看了一会儿书。');
+      addLog(pick(['你伏案看了一会儿书。', '你翻开课本，一页一页啃了下去。', '窗外再吵，把头埋进书里，世界就静了。']));
     } },
   { id: 'exercise', loc: 'home', label: '运动锻炼', cond: () => true, run: () => {
       gain('体质', 1.2 * S.apt.运动); gainNeed('精力', -9); gainNeed('清洁', -4);
-      addLog('你活动筋骨，跑得满头大汗。');
+      addLog(pick(['你活动筋骨，跑得满头大汗。', '你绕着院子跑了三圈，气喘吁吁。', '俯卧撑、仰卧起坐，你一个没落。']));
     } },
   { id: 'chore', loc: 'home', label: '帮忙家务', cond: () => true, run: () => {
       gainNeed('心情', 3); gain('魅力', 0.4);
       if (S.familyKey === 'poor' && chance(0.5)) { gainMoney(1); addLog('你帮家里干活，大人塞给你一块钱。'); }
-      else addLog('你帮忙扫了地、叠了被子。');
+      else addLog(pick(['你帮忙扫了地、叠了被子。', '你擦了桌子，把碗筷摆得整整齐齐。', '你倒垃圾、收衣服，大人直夸懂事。']));
     } },
   { id: 'art', loc: 'home', label: () => (S.flags.art ? '练习' + S.flags.art : '画画弹琴'), cond: () => !!S.flags.art, run: () => {
       gain('魅力', 1.0 * S.apt.艺术); gainSkill(S.flags.art, 3); gainNeed('心情', 4);
-      addLog(`你练习${S.flags.art}，渐入佳境。`);
+      addLog(pick([`你练习${S.flags.art}，渐入佳境。`, `你沉下心练了一阵${S.flags.art}，比上次顺了些。`, `练${S.flags.art}的时候，时间过得飞快。`]));
     } },
-  { id: 'cook', loc: 'home', label: '动手做饭', cond: () => (S.flags.ingredients || 0) > 0, run: () => {
+  { id: 'cook', loc: 'home', label: () => '动手做饭（食材×' + (S.flags.ingredients || 0) + '）', cond: () => (S.flags.ingredients || 0) > 0, run: () => {
       S.flags.ingredients--;
       gainNeed('饱食', 42); gainSkill('烹饪', 3);
       if ((S.skills.烹饪 || { lvl: 1 }).lvl >= 2 && chance(0.6)) { gainNeed('心情', 6); addLog(`你做了顿饭，全家都吃得很香。「咱家孩子手艺真好。」`); }
-      else addLog('你照着印象做了顿饭，能吃，甚至有点香。');
+      else addLog(pick(['你照着印象做了顿饭，能吃，甚至有点香。', '你掂了掂锅铲，炒出一盘像样的菜。', '厨房叮叮当当一阵，你端出了一桌子热气。']));
     } },
   { id: 'chat', loc: 'home', label: '和家人聊天', cond: () => true, run: () => {
       gainNeed('心情', 9);
       if (chance(0.15)) { addBuff('被爱环绕', '家人的话熨帖了心。', 5); addLog('和家人聊了很久，心里暖烘烘的。'); }
-      else addLog('你们随口聊着天，鸡毛蒜皮，也挺好。');
+      else addLog(pick(['你们随口聊着天，鸡毛蒜皮，也挺好。', '家人讲了个笑话，饭桌上一片笑声。', '你说起今天的事，大人听得很认真。']));
     } },
   /* ---- 公园 ---- */
-  { id: 'walk', loc: 'park', label: '散步', cond: () => true, run: () => { gainNeed('心情', 7); gain('体质', 0.3); addLog('你在林荫道上慢慢走，影子被太阳拉得老长。'); } },
-  { id: 'slide', loc: 'park', label: '滑梯秋千', cond: () => S.age <= 9, run: () => { gainNeed('娱乐', 24); gainNeed('心情', 6); addLog('滑梯、秋千、跷跷板，你玩了个遍。'); } },
+  { id: 'walk', loc: 'park', label: '散步', cond: () => true, run: () => {
+      gainNeed('心情', 7); gain('体质', 0.3);
+      const views = [
+        ['晨光透过树叶洒了一地，你踩着光斑慢慢走。', '清晨的公园笼着薄雾，鸟比人醒得早。'],
+        ['上午的风正好，你沿着林荫道慢慢走。', '阳光不烫，影子不长，正是散步的好时候。'],
+        ['正午的树荫下凉快，你躲着日头慢慢踱。', '中午的公园没什么人，安静得能听见蝉。'],
+        ['你在林荫道上慢慢走，影子被太阳拉得老长。', '下午的湖面亮闪闪的，你看得有点出神。'],
+        ['晚霞把天烧红了半边，你走得很慢，想多看一会儿。', '傍晚的风凉下来，散步的人渐渐多了。'],
+        ['路灯一盏一盏亮起来，你踩着灯影往家走。', '夜里的公园很静，只有虫鸣和你的脚步。'],
+      ];
+      addLog(pick(views[S.slot] || views[3]));
+    } },
+  { id: 'slide', loc: 'park', label: '滑梯秋千', cond: () => S.age <= 9, run: () => { gainNeed('娱乐', 24); gainNeed('心情', 6); addLog(pick(['滑梯、秋千、跷跷板，你玩了个遍。', '你从滑梯上冲下来，风在耳边呼呼响。'])); } },
   { id: 'fish', loc: 'park', label: '湖边垂钓', cond: () => S.age >= 5, run: () => {
       const lvl = (S.skills.钓鱼 || { lvl: 1 }).lvl;
       if (lvl >= 5 && chance(0.07)) {
@@ -2641,14 +2689,14 @@ const ACTIONS = [
       }
       gainNeed('娱乐', 14); gainSkill('钓鱼', 2);
       const roll = Math.random();
-      if (roll < 0.3) addLog('钓上一团水草。你把它甩回了湖里。');
+      if (roll < 0.3) addLog(pick(['钓上一团水草。你把它甩回了湖里。', '鱼漂动了半天，拉上来一截烂树枝。']));
       else if (roll < 0.45) { gainMoney(1); addLog('钓上一只旧皮鞋，居然抖出一枚硬币。'); }
-      else if (roll < 0.8) { gainNeed('饱食', 10); addLog('钓上一条小鱼！晚上可以加餐了。'); }
+      else if (roll < 0.8) { S.flags.ingredients = (S.flags.ingredients || 0) + 1; addLog('钓上一条小鱼！拎回家，晚上可以加餐了。'); }
       else { gainSkill('钓鱼', 4); addLog('鱼没钓到，但你把「姜太公钓鱼」理解透了。'); }
     } },
   { id: 'watch', loc: 'park', label: '观察花鸟虫鱼', cond: () => S.age <= 9, run: () => {
       gain('智力', 0.4 * S.apt.学习); gainNeed('心情', 3);
-      addLog('你看蚂蚁搬家、看蜻蜓点水，一看就是半天。');
+      addLog(pick(['你看蚂蚁搬家、看蜻蜓点水，一看就是半天。', '你蹲在花坛边，看一只蜗牛爬完整片叶子。']));
     } },
   /* ---- 学堂 ---- */
   { id: 'class', loc: 'school', label: () => '去' + schoolTitle() + '上课', cond: () => !S.flags.wentSchool && S.slot <= 3, run: goSchool },
@@ -2661,18 +2709,18 @@ const ACTIONS = [
   { id: 'book', loc: 'square', label: '书店买书', cost: 8, cond: () => S.money >= 8, run: () => {
       gainMoney(-8); gain('智力', 1.2);
       addBuff('灵感迸发', '新书在手，学什么都事半功倍。', 6, { gainMul: 1.5 });
-      addLog('你在旧书店淘到一本好书，如获至宝。');
+      addLog(pick(['你在旧书店淘到一本好书，如获至宝。', '书页泛黄，但故事是新的。你把书抱得紧紧的。']));
     } },
   { id: 'toy', loc: 'square', label: '玩具摊', cost: 12, cond: () => S.money >= 12, run: () => {
       gainMoney(-12); gainNeed('娱乐', 32); gainNeed('心情', 8);
-      addLog('你买了个新玩具，一路都是蹦着回家的。');
+      addLog(pick(['你买了个新玩具，一路都是蹦着回家的。', '新玩具攥在手里，你一路舍不得放下。']));
     } },
   { id: 'snack', loc: 'square', label: '小吃摊', cost: 4, cond: () => S.money >= 4, run: () => {
       gainMoney(-4); gainNeed('饱食', 26); gainNeed('心情', 4);
-      addLog('一串糖葫芦下肚，甜到了心里。');
+      addLog(pick(['一串糖葫芦下肚，甜到了心里。', '刚出锅的糖炒栗子，烫得你直哈气。', '一碗豆腐脑，咸香滑嫩，你吃得干干净净。']));
     } },
-  { id: 'artist', loc: 'square', label: '看街头艺人', cond: () => true, run: () => { gainNeed('娱乐', 14); gainNeed('心情', 4); addLog('街头艺人翻着跟头，你看得津津有味。'); } },
-  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => { gain('智力', 0.4); gainNeed('娱乐', 6); addLog('你在棋摊边看了两盘，似懂非懂。'); } },
+  { id: 'artist', loc: 'square', label: '看街头艺人', cond: () => true, run: () => { gainNeed('娱乐', 14); gainNeed('心情', 4); addLog(pick(['街头艺人翻着跟头，你看得津津有味。', '拉二胡的老爷爷闭着眼，你听入了迷。'])); } },
+  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => { gain('智力', 0.4); gainNeed('娱乐', 6); addLog(pick(['你在棋摊边看了两盘，似懂非懂。', '老大爷们的棋杀得难解难分，你大气都不敢出。'])); } },
   /* ---- 菜市场 ---- */
   { id: 'veg', loc: 'market', label: '买菜', cost: 3, cond: () => S.money >= 3, run: () => {
       gainMoney(-3); S.flags.ingredients = (S.flags.ingredients || 0) + 1;
@@ -2681,7 +2729,7 @@ const ACTIONS = [
     } },
   { id: 'deli', loc: 'market', label: '熟食铺', cost: 6, cond: () => S.money >= 6, run: () => {
       gainMoney(-6); gainNeed('饱食', 44); gainNeed('心情', 3);
-      addLog('错过了饭点，熟食铺的烧鸡救了你一命。');
+      addLog(pick(['错过了饭点，熟食铺的烧鸡救了你一命。', '半只酱鸭、二两卤味，今天的晚饭有着落了。']));
     } },
   { id: 'carry', loc: 'market', label: '帮摊主搬货', cond: () => S.age >= 7, run: () => {
       gain('体质', 0.5); gain('魅力', 0.5);
@@ -2771,7 +2819,7 @@ function render() {
   // 技艺
   const sk = Object.entries(S.skills);
   $('ui-skills').innerHTML = sk.length
-    ? sk.map(([n, v]) => `<span class="tag" title="等级 ${v.lvl} · 经验 ${v.xp}/${v.lvl * 10}">${n} ${'★'.repeat(v.lvl)}</span>`).join('')
+    ? sk.map(([n, v]) => `<span class="tag" title="${n} ${v.lvl} 级 · ${skillDesc(n, v.lvl)}（经验 ${v.xp}/${v.lvl * 10}）">${n} ${'★'.repeat(v.lvl)}</span>`).join('')
     : '<span class="dim">尚无</span>';
   // 状态
   $('ui-buffs').innerHTML = S.buffs.length

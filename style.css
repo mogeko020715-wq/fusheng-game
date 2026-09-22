@@ -240,6 +240,13 @@ h3 {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 #event-text { margin: 10px 0 16px; font-size: 16px; }
+/* 事件 CG 横幅：线稿插画挂弹窗顶部，纸张描边与 sketch 风格统一 */
+.ev-cg {
+  display: block; width: 100%; height: auto;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px 4px 10px 4px / 4px 10px 4px 10px;
+  margin-bottom: 10px;
+}
 #event-choices { display: flex; flex-direction: column; gap: 8px; }
 .choice-btn {
   font-family: inherit; font-size: 15.5px; text-align: left;
@@ -1061,7 +1068,47 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 #actor-sprite {
   height: 100px;                      /* 内容 1800/2150 → 人物实高 ≈84px */
   transform-origin: 50% 100%;
-  transition: transform .45s var(--ease-in-out-soft), translate .3s var(--ease-in-out-soft);
+  transition: transform .45s var(--ease-in-out-soft), translate .3s var(--ease-in-out-soft),
+              opacity .28s var(--ease-in-out-soft), rotate .3s var(--ease-in-out-soft);
+}
+/* 睡觉小床（A 案）：被褥鼓包 + 枕头，anim-sleep 期间淡入，压在立绘底下。
+   横躺帧头在右：枕头在右端、Zzz 也在右侧。床比身体宽出一圈，边缘才能从不透明的
+   纸色剪影下露出来 */
+#actor-bed {
+  position: absolute; left: 50%; bottom: 0; z-index: 0;
+  width: 118px; height: 14px;
+  transform: translateX(-50%);
+  border: 2px solid var(--ink);
+  border-radius: 48% 52% 46% 54% / 72% 74% 36% 38%;
+  opacity: 0;
+  transition: opacity .45s var(--ease-in-out-soft) .35s;
+}
+#actor-bed::before {                /* 枕头（头朝右） */
+  content: ''; position: absolute; right: 3px; top: -8px;
+  width: 20px; height: 11px;
+  border: 2px solid var(--ink);
+  border-radius: 45% 55% 50% 50% / 62% 62% 44% 44%;
+  background: var(--paper);
+}
+#actor-sprite-bob { position: relative; z-index: 1; }
+#actor.anim-sleep ~ #actor-sprite-wrap #actor-bed { opacity: 1; }
+#scene-stage.slot-5 #actor-bed,
+#scene-stage.slot-5 #actor-bed::before { border-color: #d9d4c7; }
+#scene-stage.slot-5 #actor-bed::before { background: transparent; }
+/* Zzz：睡觉期间从头部（右侧）上方飘起 */
+#actor-fx .zzz {
+  display: none; position: absolute;
+  font-weight: bold; color: var(--ink);
+}
+#actor.anim-sleep ~ #actor-fx .zzz { display: block; animation: zFloat 1.7s ease-out infinite; }
+#actor-fx .z1 { right: -20px; top: 38px; font-size: 12px; }
+#actor-fx .z2 { right: -32px; top: 28px; font-size: 15px; animation-delay: .55s; }
+#actor-fx .z3 { right: -46px; top: 18px; font-size: 18px; animation-delay: 1.1s; }
+#scene-stage.slot-5 #actor-fx .zzz { color: #d9d4c7; }
+@keyframes zFloat {
+  0%   { transform: translateY(5px) scale(.8); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateY(-9px) scale(1.08); opacity: 0; }
 }
 @media (max-width: 720px) { #actor-sprite { height: 100px; } } /* 移动端不再缩小：50px 太小看不见 */
 /* 横版睡觉帧：画布 2150×900，改用宽度基准（与站立帧同一 canvas 缩放比） */
@@ -1084,14 +1131,8 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 #actor.anim-startle ~ #actor-sprite-wrap #actor-sprite { animation: startleJump .6s cubic-bezier(.3, .7, .4, 1); }
 #actor.anim-trip ~ #actor-sprite-wrap #actor-sprite { animation: tripFall 1s var(--ease-in-out-soft); }
 /* 睡觉：蹲下 → 缓缓侧躺 → 躺定 → 起身回正，不再是直挺挺倒地 */
-@keyframes lieDown {
-  0%   { transform: rotate(0deg) translate(0, 0); }
-  28%  { transform: rotate(6deg) translate(1px, 7px); }   /* 先蹲身 */
-  58%  { transform: rotate(74deg) translate(4px, 6px); }  /* 缓缓侧躺 */
-  76%  { transform: rotate(74deg) translate(4px, 6px); }  /* 躺定 */
-  100% { transform: rotate(0deg) translate(0, 0); }       /* 起身回正 */
-}
-#actor.anim-sleep ~ #actor-sprite-wrap #actor-sprite { animation: lieDown 2.3s var(--ease-in-out-soft); }
+/* lieDown 旋转动画已退役：横躺帧本身已是躺姿，再转 74° 会悬浮成斜角。
+   睡觉的倒下/起身由 spriteSleep 的交叉淡化时间轴接管（见 game.js 睡觉 v2）。 */
 /* 立绘头更高，情绪气泡上移 */
 #actor.spr-off ~ #actor-fx .mb { top: -28px; }
 

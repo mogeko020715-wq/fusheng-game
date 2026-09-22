@@ -372,8 +372,8 @@ function actorAnim(name, prop) {
     if (name === 'walk') { spritePlay('walk', 150, [0, -2, 0, 0, -2, 0]); return; }
     if (name === 'run') { spritePlay('run', 95, [0, -3, 0, -3]); return; }
     if (name === 'jump') { spritePlay('jump', 190, [0, -8, -26, -4, 0]); return; }
-    if (name === 'sleep') { spriteSleep(); return; } // 蹲身→横躺帧→起身
-    if (name === 'eat') spriteHold('eat', 1600);       // 静态帧 + class 流程的微动叠加
+    if (name === 'sleep') { spriteSleep(); } // 不 return：class 流程要落 anim-sleep 驱动小床/Zzz 入场
+    else if (name === 'eat') spriteHold('eat', 1600);  // 静态帧 + class 流程的微动叠加
     else if (name === 'sit') spriteHold('sit', 1600);
     else if (name === 'celebrate') spriteHold('celebrate', 1600); // 专属欢呼帧，class 流程叠加跳星 fx
     else if (name === 'trip') spriteHold('trip', 1200);
@@ -391,7 +391,7 @@ function actorAnim(name, prop) {
     a.classList.remove('anim-' + name);
     a.classList.remove('ps-sit', 'ps-lie');
     PROP_CLASSES.forEach((c) => a.classList.remove(c));
-  }, name === 'sleep' ? 2400 : 950);
+  }, name === 'sleep' ? 2750 : 950);
 }
 
 /* ---------------- 立绘模式：线稿 sprite 接管简笔小人 ----------------
@@ -473,33 +473,45 @@ function spriteHold(name, dur) {
   }, dur);
 }
 /* 睡觉：蹲身 → 换横躺帧躺定 → 换回站姿起身（横版帧用 f-sleep 类切宽度基准） */
+/* ---------------- 睡觉 v2（A+B：床淡入 + 交叉淡化 + Zzz）----------------
+ * 时间轴：蹲身侧倒淡出 → 换横躺帧淡入（床与 Zzz 由 anim-sleep class 驱动 CSS 入场）
+ *        → 躺定 → 淡出换站姿淡入 → 归位。全程无硬切。 */
 function spriteSleep() {
   const el = $('actor-sprite');
   if (!spriteSt.ready || !el || !spriteCache.sleep) return;
   spriteClearTimers();
   spriteSt.busy = true;
-  el.style.translate = '0px 8px'; // 先蹲身
-  spriteSt.s1 = setTimeout(() => {
+  el.style.translate = '0px 7px';           // 蹲身
+  el.style.rotate = '6deg';                 // 顺势侧倒
+  spriteSt.s1 = setTimeout(() => { el.style.opacity = '.15'; }, 300);
+  spriteSt.s2 = setTimeout(() => {          // 交叉淡化：换横躺帧淡入
     spriteSet('sleep');
     el.classList.add('f-sleep');
+    el.style.rotate = '0deg';
     el.style.translate = '0px 0px';
-  }, 450);
-  spriteSt.s2 = setTimeout(() => { // 躺 1.45s 后起身
+    el.style.opacity = '1';
+  }, 620);
+  spriteSt.s3 = setTimeout(() => { el.style.opacity = '.15'; }, 2050); // 起身前淡出
+  spriteSt.s4 = setTimeout(() => {
     el.classList.remove('f-sleep');
     spriteSet('stand');
-    el.style.translate = '0px 8px';
-  }, 1900);
-  spriteSt.s3 = setTimeout(() => {
+    el.style.translate = '0px 7px';
+    el.style.opacity = '1';
+  }, 2350);
+  spriteSt.s5 = setTimeout(() => {
     el.style.translate = '0px 0px';
     spriteSt.busy = false;
     updateSpriteMood();
-  }, 2350);
+  }, 2650);
 }
 /* 帧播放器：换 img.src 播帧，Y 位移走 translate 属性（与 CSS transform 动画互不干扰） */
 function spriteClearTimers() {
   clearInterval(spriteSt.timer);
   clearTimeout(spriteSt.holdT);
-  ['s1', 's2', 's3'].forEach((k) => clearTimeout(spriteSt[k]));
+  ['s1', 's2', 's3', 's4', 's5'].forEach((k) => clearTimeout(spriteSt[k]));
+  // 睡觉被打断时可能停在淡出/侧倒中态，统一复位
+  const el = typeof $ === 'function' ? $('actor-sprite') : null;
+  if (el) { el.style.opacity = '1'; el.style.rotate = '0deg'; }
 }
 function spritePlay(kind, interval, dy) {
   const el = $('actor-sprite');
@@ -1276,7 +1288,7 @@ const EVENTS = [
 
   /* ---- 3-7岁 · 童年氛围包 ---- */
   {
-    id: 'piggyback', maxLife: 2, title: '动物园的肩膀', min: 3, max: 5,
+    id: 'piggyback', maxLife: 2, title: '动物园的肩膀', min: 3, max: 5, cg: 'cg-piggyback',
     text: '动物园里人山人海，猴山前围了里三层外三层。你踮着脚也只能看见大人的后背。爸爸蹲下来：「上来。」你骑上他的肩膀，一下子比所有人都高。',
     choices: [
       { t: '抓紧爸爸的头发，看猴子荡秋千', ok: { 心情: 8, mem: '你骑在爸爸肩膀上看猴子，全动物园就数你看得最清楚。' }, okTxt: '一只小猴子倒挂金钩，你高兴得直晃，爸爸被你揪得龇牙咧嘴，却站得稳稳的。' },
@@ -1355,7 +1367,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'firefly', maxLife: 2, title: '萤火虫', min: 4, max: 7,
+    id: 'firefly', maxLife: 2, title: '萤火虫', min: 4, max: 7, cg: 'cg-firefly',
     cond: (s) => s.location !== 'home' && s.slot === 5,
     text: '天全黑了，草丛里忽然亮起一点一点的光——是萤火虫！提着小灯笼，在你眼前一闪一闪。',
     choices: [
@@ -1382,7 +1394,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'album', maxLife: 1, title: '厚厚的相册', min: 6, max: 7,
+    id: 'album', maxLife: 1, title: '厚厚的相册', min: 6, max: 7, cg: 'cg-album',
     cond: (s) => s.location === 'home',
     text: '翻箱倒柜找图画本的时候，你翻出一本厚厚的相册。一页页翻过去——百天的、周岁的、第一次走路摔跤的……原来你小时候的样子，妈妈全都存着。',
     choices: [
@@ -1400,7 +1412,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'grandpa-bike', maxLife: 2, title: '姥爷的自行车', min: 4, max: 6,
+    id: 'grandpa-bike', maxLife: 2, title: '姥爷的自行车', min: 4, max: 6, cg: 'cg-grandpa-bike',
     text: '春天的早晨，姥爷蹬着他那辆老自行车送你去幼儿园。风从耳边呼呼地过，路两边的树刚冒新芽。你坐在后座上，忽然特别想唱歌。',
     choices: [
       { t: '迎着风大声唱', ok: { 心情: 8, 娱乐: 4, mem: '那个春天的早晨，你在姥爷的自行车后座上唱了一路的歌。' }, okTxt: '你唱得跑调，姥爷跟着哼，哼得也跑调。风把两串跑调的歌声吹散了一路。' },
@@ -1492,7 +1504,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'gaokao-eve', maxLife: 1, title: '高考前夜', min: 17, max: 17, weight: 4,
+    id: 'gaokao-eve', maxLife: 1, title: '高考前夜', min: 17, max: 17, weight: 4, cg: 'cg-gaokao-eve',
     text: '明天就是高考。准考证、笔袋、水杯在桌上一字排开，检查了三遍。窗外蝉声正盛，你比自己想象中平静。',
     choices: [
       { t: '早点睡，把状态留到明天', ok: { 精力: 15, 心情: 6, mem: '高考前夜你睡得意外的香。' }, okTxt: '你跟自己说：该复习的都复习了，剩下的交给笔尖。' },
@@ -1500,7 +1512,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'grad-dinner', maxLife: 1, title: '散伙饭', min: 17, max: 17, weight: 3,
+    id: 'grad-dinner', maxLife: 1, title: '散伙饭', min: 17, max: 17, weight: 3, cg: 'cg-grad-dinner',
     text: '散伙饭订在常去的那家小馆子。班主任被起哄着喝了杯汽水，说了好多平时不会说的话。不知谁先起的头，包厢里的歌越唱越跑调。',
     choices: [
       { t: '挨个和同学碰杯，把想说的话都说了', ok: { 心情: 12, 魅力: 1.5, mem: '散伙饭上你把三年的感谢都说了个遍，有人哭了，大家都装作没看见。' }, okTxt: '那天晚上你们互相在校服上签名，密密麻麻，像一张青春的地图。' },
@@ -2123,7 +2135,7 @@ const EVENTS = [
 /* ---------------- 里程碑事件 ---------------- */
 const MILESTONES = {
   3: {
-    id: 'm3', title: '第一次逛公园',
+    id: 'm3', cg: 'cg-m3', title: '第一次逛公园',
     text: '三岁这天，大人牵着你第一次走进公园。你看什么都新鲜：会发光的泡泡、追着泡泡跑的小孩、还有比你高好多的大树。\n世界原来这么大。',
     choices: [
       { t: '摇摇晃晃追着泡泡跑', ok: { 体质: 1, 心情: 8, mem: '你人生中第一次逛公园，追了一下午泡泡。' } },
@@ -2139,7 +2151,7 @@ const MILESTONES = {
     ],
   },
   7: {
-    id: 'm7', title: '成为小学生',
+    id: 'm7', cg: 'cg-m7', title: '成为小学生',
     text: '红领巾系在胸前，你正式成为一名小学生。校门比幼儿园气派多了，课程表密密麻麻。',
     choices: [
       { t: '暗暗下决心要当学霸', ok: { 智力: 2, flag: { ambition: true }, mem: '上小学第一天，你暗下决心要当学霸。' } },
@@ -2147,7 +2159,7 @@ const MILESTONES = {
     ],
   },
   8: {
-    id: 'm8', title: '长大以后……',
+    id: 'm8', cg: 'cg-m8', title: '长大以后……',
     text: '语文课上，老师让大家轮流说：长大以后想做什么。\n有人说要当医生，有人说要开飞机。教室里热闹极了。\n轮到你了——',
     choices: [
       { t: '「我要当科学家！」', ok: { flag: { dream: 'science' }, 智力: 1, mem: '八岁那年，你说你想当科学家。' }, okTxt: DREAM_OKTXT },
@@ -2197,7 +2209,7 @@ const MILESTONES = {
     choices: [{ t: '收下录取通知书', ok: {} }],
   },
   18: {
-    id: 'm18', title: '成年礼',
+    id: 'm18', cg: 'cg-m18', title: '成年礼',
     text: '十八岁的清晨，你在镜子里端详了很久。\n法律上说，从今天起你是个大人了。回头看这十五年：哭过、笑过、后悔过、也骄傲过。往后的路，要自己走了。\n谢谢你，认真长大过。',
     choices: [{ t: '告别童年', ok: {} }],
     final: true,
@@ -2362,6 +2374,9 @@ function openEvent(ev, isMilestone = false) {
     if (!isMilestone) codexCollectEvent(ev.id); // 事件图鉴：见过即收集
   }
   if (isMilestone) Sound.play('chime');
+  const cgImg = $('event-cg');
+  if (ev.cg) { cgImg.src = 'assets/cg/' + ev.cg + '.png'; cgImg.classList.remove('hidden'); }
+  else { cgImg.classList.add('hidden'); cgImg.removeAttribute('src'); }
   $('modal-event').classList.remove('hidden');
   $('event-title').textContent = ev.title;
   $('event-text').textContent = typeof ev.text === 'function' ? ev.text(S) : ev.text;

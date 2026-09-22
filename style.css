@@ -261,7 +261,7 @@ h3 {
 #end-memories { text-align: left; font-size: 14.5px; margin: 0 auto 20px; max-width: 480px; }
 #end-memories p { padding: 3px 0; border-bottom: 1px dotted var(--paper-dark); }
 
-/* ---------- 往生录 ---------- */
+/* ---------- 回忆册 ---------- */
 #memorial-list { margin: 12px 0; max-height: 40vh; overflow-y: auto; }
 #memorial-list .mem-item {
   border-bottom: 1px dashed var(--gray);
@@ -321,7 +321,7 @@ h3 {
 #scene-stage.slot-1, #scene-stage.slot-2 { background: #fbf9f3; }
 #scene-stage.slot-3 { background: #f6f2e7; }
 #scene-stage.slot-4 { background: #f0e4cf; }
-#scene-stage.slot-5 { background: #2b2a25; }
+#scene-stage.slot-5 { background: #1f2742; }
 
 #scene-art {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
@@ -856,6 +856,17 @@ h3 {
   background: #fffdf7;
 }
 .codex h3 { margin: 0 0 8px; font-size: 14px; }
+.codex h4 { margin: 8px 0 4px; font-size: 12.5px; font-weight: normal; color: var(--gray); }
+.codex-sub { margin-top: 10px; }
+.codex-band h4 { letter-spacing: .1em; }
+.codex-skill { padding: 3px 0; font-size: 14px; border-bottom: 1px dotted var(--paper-dark); }
+.codex-skill:last-of-type { border-bottom: none; }
+.codex-stars { letter-spacing: .15em; color: var(--accent); }
+.rare-tag {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #fdf3ef;
+}
 .codex-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .dim-tag {
   border-style: dashed;
@@ -1056,8 +1067,10 @@ body { -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(28,28,28,.
 /* 横版睡觉帧：画布 2150×900，改用宽度基准（与站立帧同一 canvas 缩放比） */
 #actor-sprite.f-sleep { height: auto; width: 100px; }
 
-/* 夜晚反白：整图 invert，零额外素材 */
-#scene-stage.slot-5 #actor-sprite { filter: invert(.92); }
+/* 夜晚不再反白：纸色剪影在深蓝底上自带月光感，略降亮度压一压；
+   道具浮标字符同步换浅色（墨色在深蓝底上看不见） */
+#scene-stage.slot-5 #actor-sprite { filter: brightness(.9); }
+#scene-stage.slot-5 #actor-fx::after { color: #d9d4c7; }
 
 /* 无帧序列动作的 transform 表演（帧播放的位移走 translate 属性，互不干扰） */
 #actor.anim-sit ~ #actor-sprite-wrap #actor-sprite,

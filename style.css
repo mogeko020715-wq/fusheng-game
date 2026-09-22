@@ -262,7 +262,7 @@ h3 {
 #end-memories p { padding: 3px 0; border-bottom: 1px dotted var(--paper-dark); }
 
 /* ---------- 回忆册 ---------- */
-#memorial-list { margin: 12px 0; max-height: 40vh; overflow-y: auto; }
+#memorial-list { margin: 12px 0; max-height: 55vh; overflow-y: auto; }
 #memorial-list .mem-item {
   border-bottom: 1px dashed var(--gray);
   padding: 8px 2px; font-size: 14.5px; text-align: left;

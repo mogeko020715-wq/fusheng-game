@@ -63,7 +63,7 @@ const Sound = {
         const p = this.ctx.resume();
         if (p && typeof p.then === 'function') {
           p.then(() => {
-            // 解锁成功：补播刚被吞掉的那一声（比如降生时的钟声）
+            // 解锁成功：补播刚被吞掉的那一声（比如出生时的钟声）
             const pend = this.pending;
             this.pending = null;
             if (pend && !this.muted) this.play(pend);
@@ -667,7 +667,7 @@ function dreamFulfilled() {
 
 /* ---------------- 人生图鉴 ---------------- */
 const ALL_TAGS = {
-  '天不假年': '在成年之前谢幕',
+  '未竟之年': '在成年之前止步',
   '金榜题名': '中考考上重点高中',
   '按部就班': '考上普通高中，平稳落地',
   '另辟蹊径': '走进职业高中，换一条赛道',
@@ -705,7 +705,7 @@ const SPEC_TAGS = {
 function computeTags(cause) {
   const tags = [];
   const happy = Math.round(S.happinessSum / S.happinessCnt);
-  if (cause === '夭') tags.push('天不假年');
+  if (cause === 'early') tags.push('未竟之年');
   if (S.exam === '重点高中') tags.push('金榜题名');
   if (S.exam === '普通高中') tags.push('按部就班');
   if (S.exam === '职业高中') tags.push('另辟蹊径');
@@ -761,7 +761,7 @@ function newLife() {
   };
   fxQueue = [];
   addLog(`你出生了。${fam.name}，${S.home}。`, 'sys');
-  addLog(`父母给你取名「${name}」。这一世，请多保重。`, 'sys');
+  addLog(`父母给你取名「${name}」。往后的日子，请多保重。`, 'sys');
 }
 
 /* ---------------- 日志 & 记忆 ---------------- */
@@ -795,7 +795,7 @@ function gainHealth(v) {
   const before = S.needs.健康;
   S.needs.健康 = clamp(round1(S.needs.健康 + v), 0, 100);
   fx('健康', S.needs.健康 - before);
-  if (S.needs.健康 <= 0 && S.alive) endLife('夭');
+  if (S.needs.健康 <= 0 && S.alive) endLife('early');
 }
 function gainMoney(v) {
   const before = S.money;
@@ -2198,7 +2198,7 @@ const MILESTONES = {
   },
   18: {
     id: 'm18', title: '成年礼',
-    text: '十八岁的清晨，你在镜子里端详了很久。\n法律上说，从今天起你是个大人了。回头看这十五年：哭过、笑过、后悔过、也骄傲过。往后的路，要自己走了。\n谢谢你，来过这一世。',
+    text: '十八岁的清晨，你在镜子里端详了很久。\n法律上说，从今天起你是个大人了。回头看这十五年：哭过、笑过、后悔过、也骄傲过。往后的路，要自己走了。\n谢谢你，认真长大过。',
     choices: [{ t: '告别童年', ok: {} }],
     final: true,
   },
@@ -2359,6 +2359,7 @@ function openEvent(ev, isMilestone = false) {
     S.flags.evCount[ev.id] = (S.flags.evCount[ev.id] || 0) + 1;
     S.flags.evSeenDay = S.flags.evSeenDay || {};
     S.flags.evSeenDay[ev.id] = S.day; // 冷却计时：近期见过的事件降权
+    if (!isMilestone) codexCollectEvent(ev.id); // 事件图鉴：见过即收集
   }
   if (isMilestone) Sound.play('chime');
   $('modal-event').classList.remove('hidden');
@@ -2947,7 +2948,7 @@ function render() {
 }
 
 /* ============================================================
- * 结局与往生录
+ * 结局与回忆册
  * ============================================================ */
 function dominantAttr() {
   return Object.entries(S.attrs).sort((a, b) => b[1] - a[1])[0][0];
@@ -2962,8 +2963,8 @@ function shortVerdict() {
 }
 
 function buildVerdict(cause) {
-  if (cause === '夭') {
-    return `${S.name}，${S.family.name}的孩子。\n${S.age} 岁那年，这一世提前谢幕了。\n人生无常，像一盒没吃完就化掉的巧克力。\n\n——愿来生，被世界温柔以待。`;
+  if (cause === 'early') {
+    return `${S.name}，${S.family.name}的孩子。\n${S.age} 岁那年，这段旅程提前画上了句号。\n人生无常，像一盒没吃完就化掉的巧克力。\n\n——愿往后的每个日子，都被温柔以待。`;
   }
   const lines = [];
   lines.push(`${S.name}，${S.family.name}的孩子，在${S.home}长到 ${S.age} 岁。`);
@@ -2999,7 +3000,15 @@ function buildVerdict(cause) {
 }
 
 function loadMemorials() {
-  try { return JSON.parse(localStorage.getItem(MEMORIAL_KEY)) || []; } catch (e) { return []; }
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem(MEMORIAL_KEY)) || []; } catch (e) { return []; }
+  // 旧版存档兼容：提前落幕标记与旧标签名迁移（源码不落旧字面量，用转写比对）
+  const LEGACY_CAUSE = '\u592d', LEGACY_TAG = '\u5929\u4e0d\u5047\u5e74';
+  list.forEach((m) => {
+    if (m.cause === LEGACY_CAUSE) m.cause = 'early';
+    if (m.tags) m.tags = m.tags.map((t) => (t === LEGACY_TAG ? '未竟之年' : t));
+  });
+  return list;
 }
 function saveMemorial(entry) {
   const list = loadMemorials();
@@ -3007,8 +3016,44 @@ function saveMemorial(entry) {
   try { localStorage.setItem(MEMORIAL_KEY, JSON.stringify(list.slice(0, 30))); } catch (e) { /* 忽略 */ }
 }
 
+/* ---------------- 图鉴三期：事件 / 技能 / 成就（跨世收集） ---------------- */
+const CODEX_EV_KEY = 'fusheng_codex_events';
+const CODEX_SK_KEY = 'fusheng_codex_skills';
+const COMBO_NAMES = { 'combo-feast': '全鱼宴', 'combo-minigame': '自己的小游戏', 'combo-lion': '庙会舞狮' };
+const CODEX_SKILLS = ['绘画', '乐器', '编程', '武术', '烹饪', '钓鱼'];
+
+function loadJson(key, fb) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fb : v; } catch (e) { return fb; }
+}
+function saveJson(key, v) {
+  try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* 忽略 */ }
+}
+/* 事件图鉴：见过即收集（里程碑人生节拍不计，专精/组合技在技能图鉴盖章） */
+function codexCollectEvent(id) {
+  const set = new Set(loadJson(CODEX_EV_KEY, []));
+  if (!set.has(id)) { set.add(id); saveJson(CODEX_EV_KEY, [...set]); }
+}
+/* 技能图鉴：一世落幕时沉淀——历史最高等级 / 解锁过的专精方向 / 出师礼 / 组合技 */
+function codexMergeLife() {
+  const rec = loadJson(CODEX_SK_KEY, { skills: {}, combos: [] });
+  Object.entries(S.skills).forEach(([n, v]) => {
+    const r = rec.skills[n] = rec.skills[n] || { best: 0, specs: [], master: false };
+    if (v.lvl > r.best) r.best = v.lvl;
+  });
+  CODEX_SKILLS.forEach((n) => {
+    const dir = S.flags['spec_' + n];
+    const r = rec.skills[n] = rec.skills[n] || { best: 0, specs: [], master: false };
+    if (dir && !r.specs.includes(dir)) r.specs.push(dir);
+    if (S.flags['master:' + n]) r.master = true;
+  });
+  Object.keys(COMBO_NAMES).forEach((id) => {
+    if (S.flags['seen:' + id] && !rec.combos.includes(id)) rec.combos.push(id);
+  });
+  saveJson(CODEX_SK_KEY, rec);
+}
+
 /* ============================================================
- * 存档系统：刷新 / 退出重进，这一世接着过
+ * 存档系统：刷新 / 退出重进，这一程接着走
  * —— 人生仍无法读档重来，只是允许「中场休息」
  * ============================================================ */
 function saveGame() {
@@ -3066,6 +3111,7 @@ function endLife(cause) {
   Sound.play('bell');
   const verdict = buildVerdict(cause);
   const tags = computeTags(cause);
+  codexMergeLife(); // 技能图鉴：这一世的技艺沉淀进跨世档案
   saveMemorial({
     name: S.name, gender: S.gender, family: S.family.name,
     age: S.age, days: S.day, verdict: shortVerdict(), cause,
@@ -3076,7 +3122,7 @@ function endLife(cause) {
   $('screen-game').classList.add('hidden');
   $('modal-event').classList.add('hidden');
   $('screen-end').classList.remove('hidden');
-  $('end-title').textContent = cause === '夭' ? '提 前 谢 幕' : '落 幕 · 成 年';
+  $('end-title').textContent = cause === 'early' ? '提 前 谢 幕' : '落 幕 · 成 年';
   $('end-verdict').textContent = verdict;
   $('end-stats').innerHTML = ['体质', '智力', '魅力']
     .map((k) => `<span class="tag">${k} ${Math.round(S.attrs[k])}</span>`).join('') +
@@ -3113,18 +3159,64 @@ function renderMemorials() {
   const collected = new Set();
   list.forEach((m) => (m.tags || []).forEach((t) => collected.add(t)));
   const all = Object.keys(ALL_TAGS);
-  let html = `<div class="codex"><h3>人生图鉴 · 已收集 ${collected.size}/${all.length}</h3><div class="codex-tags">` +
+
+  /* 事件图鉴：见过即收集，按年龄段分组；低权重/一生一次的叙事事件加「珍」 */
+  const evSeen = new Set(loadJson(CODEX_EV_KEY, []));
+  const isRare = (e) => (e.weight || 1) <= 0.5 || e.maxLife === 1;
+  const bands = [
+    ['童年 · 3-7 岁', (e) => e.min <= 7],
+    ['少年 · 8-12 岁', (e) => e.min >= 8 && e.min <= 12],
+    ['青春 · 13-17 岁', (e) => e.min >= 13],
+  ];
+  let evTotal = 0, evGot = 0;
+  const evHtml = bands.map(([name, f]) => {
+    const evs = EVENTS.filter(f);
+    evTotal += evs.length;
+    evGot += evs.filter((e) => evSeen.has(e.id)).length;
+    return `<div class="codex-band"><h4>${name}</h4><div class="codex-tags">` +
+      evs.map((e) => evSeen.has(e.id)
+        ? `<span class="tag${isRare(e) ? ' rare-tag' : ''}" title="${e.title}">${isRare(e) ? '珍 · ' : ''}${e.title}</span>`
+        : '<span class="tag dim-tag">？？？</span>').join('') +
+      '</div></div>';
+  }).join('');
+
+  /* 技艺图鉴：历史最高等级 / 专精方向 / 出师印 / 组合技 */
+  const skRec = loadJson(CODEX_SK_KEY, { skills: {}, combos: [] });
+  const skHtml = CODEX_SKILLS.map((n) => {
+    const r = skRec.skills[n] || { best: 0, specs: [], master: false };
+    const b = Math.min(r.best, 5);
+    const stars = '★'.repeat(b) + '☆'.repeat(5 - b);
+    const bits = [];
+    if (SPEC_TAGS[n]) {
+      bits.push('专精 ' + Object.keys(SPEC_TAGS[n]).map((d) => (r.specs.includes(d) ? d : '？？')).join(' / '));
+    }
+    if (r.master) bits.push('已出师');
+    return `<div class="codex-skill"><b>${n}</b> <span class="codex-stars">${stars}</span>` +
+      (bits.length ? ` <span class="dim">${bits.join(' · ')}</span>` : '') + '</div>';
+  }).join('');
+  const comboHtml = Object.entries(COMBO_NAMES).map(([id, name]) =>
+    skRec.combos.includes(id)
+      ? `<span class="tag rare-tag">${name}</span>`
+      : '<span class="tag dim-tag">？？？</span>').join('');
+
+  /* 成就图鉴（结局标签） */
+  const tagHtml = `<div class="codex-tags">` +
     all.map((t) => collected.has(t)
       ? `<span class="tag" title="${ALL_TAGS[t]}">${t}</span>`
       : `<span class="tag dim-tag" title="${ALL_TAGS[t]}">？？？</span>`).join('') +
-    `</div></div>`;
+    `</div>`;
+
+  let html =
+    `<div class="codex"><h3>事件图鉴 · 已收集 ${evGot}/${evTotal}</h3>${evHtml}</div>` +
+    `<div class="codex"><h3>技艺图鉴</h3>${skHtml}<h4 class="codex-sub">组合技</h4><div class="codex-tags">${comboHtml}</div></div>` +
+    `<div class="codex"><h3>成就图鉴 · 已收集 ${collected.size}/${all.length}</h3>${tagHtml}</div>`;
   html += list.length
     ? list.map((m) => `<div class="mem-item"><span class="mem-name">${m.name}</span>（${m.gender} · ${m.family}）<br>
-        ${m.cause === '夭' ? `${m.age} 岁早夭` : `平安长到 ${m.age} 岁`} · ${m.verdict} <span class="dim">${m.when}</span>` +
+        ${m.cause === 'early' ? `${m.age} 岁止步` : `平安长到 ${m.age} 岁`} · ${m.verdict} <span class="dim">${m.when}</span>` +
         (m.dream ? `<br><span class="dim">心愿：${m.dream}</span>` : '') +
         ((m.tags && m.tags.length) ? `<div class="mem-tags">${m.tags.map((t) => `<span class="tag" title="${ALL_TAGS[t] || ''}">${t}</span>`).join('')}</div>` : '') +
         `</div>`).join('')
-    : '<div class="empty">往生录还是空白。<br>去活一世吧。</div>';
+    : '<div class="empty">回忆册还是空白。<br>去认真活一场吧。</div>';
   $('memorial-list').innerHTML = html;
 }
 
@@ -3267,12 +3359,12 @@ window.addEventListener('DOMContentLoaded', () => {
     bgmVol.addEventListener('input', () => Bgm.setVolume(bgmVol.value / 100));
   }
   $('btn-born').onclick = startLife;
-  // 继续上一世
+  // 继续上次的人生
   const bc = $('btn-continue');
   const saved = loadSave();
   if (saved) {
     bc.classList.remove('hidden');
-    bc.textContent = `📿 继续上一世 · ${saved.state.name}（${saved.state.age} 岁 · 第 ${saved.state.day} 天）`;
+    bc.textContent = `🌱 继续上次的人生 · ${saved.state.name}（${saved.state.age} 岁 · 第 ${saved.state.day} 天）`;
     bc.onclick = () => { resumeLife(); };
   }
   $('btn-reborn').onclick = startLife;
@@ -3401,8 +3493,8 @@ function renderLifeScroll(cause) {
       `<div class="mem-tip">${texts.map((t) => `<p>${age} 岁：${t}</p>`).join('')}</div>` +
       `<i class="dot"></i>${texts.length > 1 ? `<b>${texts.length}</b>` : ''}</div>`;
   });
-  // 终点：成年旗 / 早夭花
-  html += `<div class="scroll-flag${cause === '夭' ? ' die' : ''}" style="left:${xOf(endAge)}px">${cause === '夭' ? '✿' : '⚑'}</div>`;
+  // 终点：成年旗 / 告别花
+  html += `<div class="scroll-flag${cause === 'early' ? ' die' : ''}" style="left:${xOf(endAge)}px">${cause === 'early' ? '✿' : '⚑'}</div>`;
   // 行走的小人（随年龄长大）
   const walkW = xOf(endAge) - 60;
   const dur = Math.max(2.5, Math.min(14, span * 0.9));
@@ -3427,7 +3519,7 @@ function renderLifeScroll(cause) {
       if (p >= 1) clearInterval(timer);
     }, 60);
   }
-  if (cause === '夭') {
+  if (cause === 'early') {
     setTimeout(() => {
       const w = box.querySelector ? box.querySelector('.scroll-walker') : null;
       if (w) w.classList.add('fallen');

@@ -57,7 +57,7 @@ const driver = `
     console.log('第' + lives + '世:', S.name, S.family.name, '活到', S.age, '岁', S.alive ? '(成年)' : '(离世)', '天数', S.day, '记忆', S.memories.length, '中考', S.exam || '无');
   }
   const mem = JSON.parse(localStorage.getItem('fusheng_memorials_v1') || '[]');
-  console.log('往生录条数:', mem.length, mem[0] ? ('最新: ' + mem[0].name + ' ' + mem[0].verdict) : '');
+  console.log('回忆册条数:', mem.length, mem[0] ? ('最新: ' + mem[0].name + ' ' + mem[0].verdict) : '');
   console.log('SMOKE TEST PASSED');
 })();
 `;

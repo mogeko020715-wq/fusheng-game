@@ -97,7 +97,7 @@ const driver = `
     reasonablePlay();
     // 统计
     stat.lifeDays.push(S.day);
-    const diedYoung = stat.lastCause === '夭';
+    const diedYoung = stat.lastCause === 'early';
     if (diedYoung) { stat.death++; stat.deathAges.push(S.age); }
     stat.exam[S.exam || '无']++;
     stat.happy.push(Math.round(S.happinessSum / S.happinessCnt));
@@ -105,7 +105,7 @@ const driver = `
     stat.money.push(S.money);
     if (S.flags.dream) { stat.dreamTotal++; if (dreamFulfilled()) stat.dreamOk++; }
     if (S.flags.arcDone) stat.arcs++;
-    computeTags(diedYoung ? '夭' : '成年').forEach(t => stat.tags[t] = (stat.tags[t]||0)+1);
+    computeTags(diedYoung ? 'early' : '成年').forEach(t => stat.tags[t] = (stat.tags[t]||0)+1);
     if (Object.values(S.skills).some(s => s.lvl >= 5)) stat.skills5++;
     (S.buffs||[]).forEach(b => stat.buffSeen[b.name] = (stat.buffSeen[b.name]||0)+1);
   }
@@ -113,8 +113,8 @@ const driver = `
   const avg = (a) => a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : 0;
   const pc = (n) => Math.round(n / N * 100) + '%';
   console.log('=== 模拟 ' + N + ' 世（普通玩家策略）===');
-  console.log('早夭率:', pc(stat.death), stat.death ? ('死亡年龄: ' + stat.deathAges.slice(0,10).join(',')) : '');
-  console.log('中考分布: 重点', pc(stat.exam['重点高中']), '普通', pc(stat.exam['普通高中']), '职高', pc(stat.exam['职业高中']), '未参加(早夭)', pc(stat.exam['无']));
+  console.log('提前落幕率:', pc(stat.death), stat.death ? ('死亡年龄: ' + stat.deathAges.slice(0,10).join(',')) : '');
+  console.log('中考分布: 重点', pc(stat.exam['重点高中']), '普通', pc(stat.exam['普通高中']), '职高', pc(stat.exam['职业高中']), '未参加(提前落幕)', pc(stat.exam['无']));
   console.log('幸福均值: 平均', avg(stat.happy), '最高', Math.max(...stat.happy), '最低', Math.min(...stat.happy));
   ['体质','智力','魅力'].forEach(k => console.log(k + ' 终值: 平均', avg(stat.attrs[k]), '范围', Math.min(...stat.attrs[k]) + '-' + Math.max(...stat.attrs[k])));
   console.log('成年时零花钱: 平均', avg(stat.money), '最高', Math.max(...stat.money));

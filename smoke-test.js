@@ -7,6 +7,7 @@ function el() {
     children: [],
     classList: { add() {}, remove() {}, contains() { return false; } },
     appendChild(c) { this.children.push(c); },
+    setAttribute() {}, removeAttribute() {},
     set innerHTML(v) { if (v === '') this.children = []; this._html = v; },
     get innerHTML() { return this._html || ''; },
     set onclick(fn) { this._onclick = fn; },
@@ -21,7 +22,7 @@ global.document = {
 global.window = { addEventListener() {} };
 global.localStorage = { _s: {}, getItem(k) { return this._s[k] ?? null; }, setItem(k, v) { this._s[k] = v; } };
 
-const src = fs.readFileSync('game.js', 'utf8');
+const src = fs.readFileSync('events.js', 'utf8') + '\n' + fs.readFileSync('game.js', 'utf8');
 
 const driver = `
 ;(function smoke(){

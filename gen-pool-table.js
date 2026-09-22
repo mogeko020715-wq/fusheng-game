@@ -1,6 +1,6 @@
 /* 生成当前事件池完整对照表 → /tmp/pool-table.md */
 const fs = require('fs');
-const src = fs.readFileSync('game.js', 'utf8');
+const src = fs.readFileSync('events.js', 'utf8') + '\n' + fs.readFileSync('game.js', 'utf8');
 function el() { return { style: {}, innerHTML: '', textContent: '', className: '', title: '', disabled: false, children: [], classList: { add() {}, remove() {}, contains() { return false } }, appendChild(c) { this.children.push(c) }, set onclick(f) { this._onclick = f }, get onclick() { return this._onclick } }; }
 const reg = {}; global.document = { getElementById: id => (reg[id] = reg[id] || el()), createElement: () => el() };
 global.window = { addEventListener() {} }; global.localStorage = { _s: {}, getItem(k) { return this._s[k] ?? null }, setItem(k, v) { this._s[k] = v } };

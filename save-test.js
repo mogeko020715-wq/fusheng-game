@@ -7,6 +7,7 @@ function el() {
     children: [],
     classList: { add() {}, remove() {}, contains() { return false; } },
     appendChild(c) { this.children.push(c); },
+    setAttribute() {}, removeAttribute() {},
     set onclick(f) { this._c = f; }, get onclick() { return this._c; },
   };
   let html = '';
@@ -26,7 +27,7 @@ global.window = { addEventListener() {} };
 const storage = {};
 global.localStorage = { _s: storage, getItem(k) { return this._s[k] ?? null; }, setItem(k, v) { this._s[k] = v; }, removeItem(k) { delete this._s[k]; } };
 
-const src = fs.readFileSync('game.js', 'utf8');
+const src = fs.readFileSync('events.js', 'utf8') + '\n' + fs.readFileSync('game.js', 'utf8');
 const driver = `
 ;(function saveTest(){
   const dismiss = () => {

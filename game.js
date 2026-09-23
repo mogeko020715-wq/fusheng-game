@@ -1413,6 +1413,55 @@ function schoolTitle() {
   return S.age <= 6 ? '幼儿园' : S.age <= 12 ? '小学' : '中学';
 }
 
+/* ---------------- 无所事事：收益近零的散文按钮，低概率「小发现」挂进记忆 ---------------- */
+function idleRun(pool, finds) {
+  return () => {
+    gainNeed('心情', 2);
+    if (finds && chance(0.12)) {
+      const f = pick(finds);
+      gainNeed('心情', 5);
+      if (f.mem) remember(f.mem);
+      addLog(f.txt, 'event');
+    } else {
+      addLog(pick(pool));
+    }
+  };
+}
+const IDLE_HOME = [
+  '你盯着天花板发呆，什么也想，什么也没想。',
+  '你趴在桌上，看灰尘在阳光里慢慢飘。',
+  '你数了一会儿自己的呼吸，数到第几忘了。',
+  '你盯着墙上的裂纹，看出了一张地图的形状。',
+  '你歪在椅子里，听冰箱嗡嗡地响。',
+  '你对着镜子里的自己眨了眨眼，他也眨了眨。',
+  '你盘腿坐着，思绪像风筝一样飘远了。',
+  '你把下巴搁在膝盖上，时间就这样漏过去了。',
+  '你望着窗外，云走得很慢，你也走得很慢。',
+  '你发了半天呆，回过神来，嘴角是翘着的。',
+];
+const IDLE_HOME_FINDS = [
+  { txt: '你在沙发缝里摸到一颗玻璃珠，对着光看了一下午。', mem: '沙发缝里藏着一颗玻璃珠，像藏着一个小小的宇宙。' },
+  { txt: '你翻旧课本，抖出一张夹了三年的糖纸，还亮晶晶的。', mem: '旧课本里夹着一张糖纸，甜味早就没了，颜色还在。' },
+  { txt: '窗台上落着一只迷路的瓢虫，你把它送回了花盆里。', mem: '你把一只迷路的瓢虫送回了家。它背上刚好七颗星。' },
+];
+const IDLE_PARK = [
+  '你躺在草地上，看一朵云从猫变成船。',
+  '云走得很慢，你看得也很慢。',
+  '你给每朵云都起了名字，转头就忘了。',
+  '一只鸟横穿过去，打散了你看的那朵云。',
+  '你眯着眼，看云的影子从草地上爬过去。',
+  '风把云吹成一条长长的河，你在河里找鱼。',
+  '你看云看到脖子酸，翻了个身接着看。',
+  '那朵云像一床被子，你有点想钻进去。',
+  '天空很高很高，你很小很小，这样挺好。',
+  '你数着云，一朵，两朵……数着数着就忘了数。',
+];
+const IDLE_PARK_FINDS = [
+  { txt: '你在草丛里捡到一颗花纹特别的玻璃珠，蓝得像一小块湖。', mem: '草丛里有一颗蓝色的玻璃珠，像谁不小心掉的湖。' },
+  { txt: '你在树根下发现一队搬家的蚂蚁，蹲着护送它们走了很远。', mem: '你护送一队蚂蚁搬了家，觉得自己像个巨人国的骑士。' },
+  { txt: '一片云长得太像鲸鱼了，你盯着它游过了整个天空。', mem: '有一朵像鲸鱼的云，游过了你整个下午的天空。' },
+];
+
 const ACTIONS = [
   /* ---- 家 ---- */
   { id: 'meal', loc: 'home', label: '吃饭', cond: () => MEAL_SLOTS.includes(S.slot), run: eatMeal },
@@ -1429,8 +1478,13 @@ const ACTIONS = [
   { id: 'study', loc: 'home', label: '看书学习', cond: () => true, run: () => {
       let g = 1.2 * S.apt.学习;
       if (S.needs.娱乐 < 20) { g *= 0.5; addLog('一直学习有点无聊，效率不高。', 'sys'); }
+      const chess = S.flags.chessThink === S.day; // 联动：棋摊看棋 → 当日读书有思路
+      if (chess) g += 0.4;
       gain('智力', g); gainNeed('娱乐', -6); gainNeed('精力', -3);
-      addLog(pick(['你伏案看了一会儿书。', '你翻开课本，一页一页啃了下去。', '窗外再吵，把头埋进书里，世界就静了。']));
+      const hasBook = S.buffs.some((b) => b.name === '灵感迸发'); // 联动：新书 buff 专用文案
+      addLog(chess ? '大爷的残局，你想了一路，落在纸上成了思路。'
+        : hasBook ? '新书在手里，字都像在发光。'
+        : pick(['你伏案看了一会儿书。', '你翻开课本，一页一页啃了下去。', '窗外再吵，把头埋进书里，世界就静了。']));
     } },
   { id: 'exercise', loc: 'home', label: '运动锻炼', cond: () => true, run: () => {
       gain('体质', 1.2 * S.apt.运动); gainNeed('精力', -9); gainNeed('清洁', -4);
@@ -1443,7 +1497,9 @@ const ACTIONS = [
     } },
   { id: 'art', loc: 'home', label: () => (S.flags.art ? '练习' + S.flags.art : '画画弹琴'), cond: () => !!S.flags.art, run: () => {
       gain('魅力', 1.0 * S.apt.艺术); gainSkill(S.flags.art, 3); gainNeed('心情', 4);
-      addLog(pick([`你练习${S.flags.art}，渐入佳境。`, `你沉下心练了一阵${S.flags.art}，比上次顺了些。`, `练${S.flags.art}的时候，时间过得飞快。`]));
+      const insp = S.flags.inspireArt === S.day; // 联动：白天观察花鸟虫鱼 → 练习有灵感
+      addLog(insp ? pick([`白天看到的蜻蜓和飞鸟，落进了${S.flags.art}里。`, `你想着白天在公园看到的东西练${S.flags.art}，格外有感觉。`])
+        : pick([`你练习${S.flags.art}，渐入佳境。`, `你沉下心练了一阵${S.flags.art}，比上次顺了些。`, `练${S.flags.art}的时候，时间过得飞快。`]));
     } },
   { id: 'cook', loc: 'home', label: () => '动手做饭（食材×' + (S.flags.ingredients || 0) + '）', cond: () => (S.flags.ingredients || 0) > 0, run: () => {
       S.flags.ingredients--;
@@ -1451,6 +1507,7 @@ const ACTIONS = [
       if ((S.skills.烹饪 || { lvl: 1 }).lvl >= 2 && chance(0.6)) { gainNeed('心情', 6); addLog(`你做了顿饭，全家都吃得很香。「咱家孩子手艺真好。」`); }
       else addLog(pick(['你照着印象做了顿饭，能吃，甚至有点香。', '你掂了掂锅铲，炒出一盘像样的菜。', '厨房叮叮当当一阵，你端出了一桌子热气。']));
     } },
+  { id: 'daydream', loc: 'home', label: '发会儿呆', cond: () => true, run: idleRun(IDLE_HOME, IDLE_HOME_FINDS) },
   { id: 'chat', loc: 'home', label: '和家人聊天', cond: () => true, run: () => {
       gainNeed('心情', 9);
       if (chance(0.15)) { addBuff('被爱环绕', '家人的话熨帖了心。', 5); addLog('和家人聊了很久，心里暖烘烘的。'); }
@@ -1470,6 +1527,7 @@ const ACTIONS = [
       addLog(pick(views[S.slot] || views[3]));
     } },
   { id: 'slide', loc: 'park', label: '滑梯秋千', cond: () => S.age <= 9, run: () => { gainNeed('娱乐', 24); gainNeed('心情', 6); addLog(pick(['滑梯、秋千、跷跷板，你玩了个遍。', '你从滑梯上冲下来，风在耳边呼呼响。'])); } },
+  { id: 'cloudgaze', loc: 'park', label: '看云', cond: () => true, run: idleRun(IDLE_PARK, IDLE_PARK_FINDS) },
   { id: 'fish', loc: 'park', label: '湖边垂钓', cond: () => S.age >= 5, run: () => {
       const lvl = (S.skills.钓鱼 || { lvl: 1 }).lvl;
       if (lvl >= 5 && chance(0.07)) {
@@ -1487,6 +1545,7 @@ const ACTIONS = [
     } },
   { id: 'watch', loc: 'park', label: '观察花鸟虫鱼', cond: () => S.age <= 9, run: () => {
       gain('智力', 0.4 * S.apt.学习); gainNeed('心情', 3);
+      S.flags.inspireArt = S.day; // 联动：当日练习技艺有灵感
       addLog(pick(['你看蚂蚁搬家、看蜻蜓点水，一看就是半天。', '你蹲在花坛边，看一只蜗牛爬完整片叶子。']));
     } },
   /* ---- 学堂 ---- */
@@ -1508,10 +1567,17 @@ const ACTIONS = [
     } },
   { id: 'snack', loc: 'square', label: '小吃摊', cost: 4, cond: () => S.money >= 4, run: () => {
       gainMoney(-4); gainNeed('饱食', 26); gainNeed('心情', 4);
-      addLog(pick(['一串糖葫芦下肚，甜到了心里。', '刚出锅的糖炒栗子，烫得你直哈气。', '一碗豆腐脑，咸香滑嫩，你吃得干干净净。']));
+      if (chance(0.25)) { // 联动：尝到手艺 → 揣回食材灵感
+        S.flags.ingredients = (S.flags.ingredients || 0) + 1;
+        addLog('你尝了摊主的手艺，回家也想试试——揣回了一份灵感（食材+1）。');
+      } else addLog(pick(['一串糖葫芦下肚，甜到了心里。', '刚出锅的糖炒栗子，烫得你直哈气。', '一碗豆腐脑，咸香滑嫩，你吃得干干净净。']));
     } },
   { id: 'artist', loc: 'square', label: '看街头艺人', cond: () => true, run: () => { gainNeed('娱乐', 14); gainNeed('心情', 4); addLog(pick(['街头艺人翻着跟头，你看得津津有味。', '拉二胡的老爷爷闭着眼，你听入了迷。'])); } },
-  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => { gain('智力', 0.4); gainNeed('娱乐', 6); addLog(pick(['你在棋摊边看了两盘，似懂非懂。', '老大爷们的棋杀得难解难分，你大气都不敢出。'])); } },
+  { id: 'chess', loc: 'square', label: '棋摊看棋', cond: () => S.age >= 6, run: () => {
+      gain('智力', 0.4); gainNeed('娱乐', 6);
+      S.flags.chessThink = S.day; // 联动：当日看书学习有思路
+      addLog(pick(['你在棋摊边看了两盘，似懂非懂。', '老大爷们的棋杀得难解难分，你大气都不敢出。']));
+    } },
   /* ---- 菜市场 ---- */
   { id: 'veg', loc: 'market', label: '买菜', cost: 3, cond: () => S.money >= 3, run: () => {
       gainMoney(-3); S.flags.ingredients = (S.flags.ingredients || 0) + 1;
@@ -1552,6 +1618,8 @@ const ACT_HINTS = {
   art: { 心情: 4 },
   cook: { 饱食: 42 },
   chat: { 心情: 9 },
+  daydream: { 心情: 2 },
+  cloudgaze: { 心情: 2 },
   walk: { 心情: 7 },
   slide: { 娱乐: 24, 心情: 6 },
   fish: { 娱乐: 14 },
@@ -1884,6 +1952,7 @@ function resumeLife() {
   $('screen-end').classList.add('hidden');
   $('screen-game').classList.remove('hidden');
   render();
+  if (!S.flags.tapHint) addLog('试着点点场景里的东西。', 'sys'); // 场景点触一次性提示
   if (d.pendingEvent) {
     const ev = findEventById(d.pendingEvent);
     if (ev) { openEvent(ev, /^m\d+$/.test(ev.id)); return true; }
@@ -1941,6 +2010,7 @@ function startLife() {
   $('screen-end').classList.add('hidden');
   $('screen-game').classList.remove('hidden');
   render();
+  if (!S.flags.tapHint) addLog('试着点点场景里的东西。', 'sys'); // 场景点触一次性提示
   runMilestones();
 }
 
@@ -2058,6 +2128,39 @@ function detectFlexGap() {
   } catch (e) { /* 检测失败则保持 margin 基线布局 */ }
 }
 
+/* ---------------- 场景点触：点场景物件浮现一句闲话（不占数值、不入岁月） ---------------- */
+const TAP_LINES = {
+  home: ['窗台上的绿植又长了一片新叶。', '厨房的钟，走得比学校的慢。', '门垫有点歪，你顺手摆正了。', '挂钟滴答滴答，家里很安心。', '米缸盖子没盖严，你按了一下。'],
+  park: ['你摸了摸老槐树粗糙的皮。', '湖面被风撩起一层细纹。', '长椅上落着一片很圆的叶子。', '远处有人放风筝，线绷得笔直。', '石凳被太阳晒得暖烘烘的。'],
+  school: ['黑板上还留着上节课的板书。', '窗台上的粉笔灰积了薄薄一层。', '操场的国旗被风吹得猎猎响。', '教室后排的绿萝爬上了窗框。', '广播里传来眼保健操的前奏。'],
+  square: ['糖炒栗子的香味飘了半条街。', '杂货铺的风铃叮当作响。', '电线杆上贴满了花花绿绿的广告。', '卖气球的老伯打了个盹。', '石板路被鞋底磨得发亮。'],
+  market: ['鱼摊的水花溅了一地。', '豆腐摊冒着白白的热气。', '秤砣碰着秤盘，当啷一声。', '青菜叶上还挂着早上的露水。', '拐角的花椒麻了半条巷子。'],
+  hospital: ['走廊尽头的窗外有一棵梧桐。', '消毒水味里混着一点饭香。', '护士站的呼叫灯闪了一下。', '长椅上的爷爷在给人让座位。', '宣传栏贴着洗手七步法。'],
+};
+function initSceneTaps() {
+  const box = $('scene-taps');
+  if (!box) return;
+  for (let i = 0; i < 3; i++) {
+    const t = document.createElement('div');
+    t.className = 'scene-tap';
+    t.addEventListener('click', () => {
+      if (!S || !S.alive || eventLock) return;
+      const lineEl = $('scene-tap-line');
+      const pool = TAP_LINES[S.location] || [];
+      if (!lineEl || !pool.length) return;
+      lineEl.textContent = pick(pool);
+      lineEl.classList.remove('hidden');
+      lineEl.style.animation = 'none';
+      void lineEl.offsetWidth; // 重触淡入淡出
+      lineEl.style.animation = '';
+      clearTimeout(initSceneTaps._t);
+      initSceneTaps._t = setTimeout(() => lineEl.classList.add('hidden'), 2600);
+      S.flags.tapHint = true;
+    });
+    box.appendChild(t);
+  }
+}
+
 /* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */
 function initTipPop() {
   const pop = $('tip-pop');
@@ -2098,6 +2201,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!document.hidden) { Sound.unlock(); Bgm.resync(); }
   });
   initTipPop();
+  initSceneTaps();
   const sb = $('btn-sound');
   const syncSndBtn = () => { sb.textContent = Sound.muted ? '🔇' : '🔊'; };
   syncSndBtn();

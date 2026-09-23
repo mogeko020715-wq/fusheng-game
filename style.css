@@ -347,6 +347,32 @@ h3 {
 #scene-art .lyr-near { bottom: 2px; }
 #scene-art svg { max-width: 100%; height: 120px; }
 
+/* ---------- 场景点触：三个透明热区 + 浮现一句闲话 ---------- */
+#scene-taps {
+  position: absolute; top: 22%; right: 0; bottom: 0; left: 0;
+  display: flex; z-index: 2;
+  -webkit-tap-highlight-color: transparent;
+}
+#scene-taps .scene-tap { flex: 1; cursor: pointer; }
+@media (hover: hover) {
+  #scene-taps .scene-tap:hover { background: rgba(28, 28, 28, 0.04); border-radius: 12px; }
+}
+#scene-tap-line {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  max-width: 82%; padding: 3px 12px;
+  background: rgba(255, 253, 247, 0.92);
+  border: 1px dashed var(--gray); border-radius: 10px 4px 10px 4px;
+  font-size: 12.5px; color: var(--ink); text-align: center;
+  z-index: 4; pointer-events: none;
+  animation: tapLineFade 2.6s ease forwards;
+}
+@keyframes tapLineFade {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  12% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ---------- 天空：太阳 / 月亮 / 星星 ---------- */
 #sky { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; }
 .cel { position: absolute; opacity: 0; transition: left .9s ease, top .9s ease, opacity .6s; }

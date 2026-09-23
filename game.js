@@ -1,6 +1,6 @@
 /* ============================================================
  * 浮生 · 众生一梦
- * 黑白简笔 · 人生模拟 · 一切随机，无法存档
+ * 黑白简笔 · 童年物语 · 一切随机，无法重来
  * ============================================================ */
 'use strict';
 
@@ -618,7 +618,7 @@ const MEAL_SLOTS = [0, 2, 4];           // 早 7 点 / 午 12 点 / 晚 6 点
 const DAYS_PER_YEAR = 6;                // 六个时段为一天，六天一岁
 const START_AGE = 3, END_AGE = 18;
 const MEMORIAL_KEY = 'fusheng_memorials_v1';
-const SAVE_KEY = 'fusheng_save_v1';     // 这一世活着就一直在，落幕即清除
+const SAVE_KEY = 'fusheng_save_v1';     // 这一程活着就一直在，落幕即清除
 
 const FAMILY = {
   poor:   { name: '贫寒之家', badge: '贫', home: ['一间漏风的平房', '筒子楼里的一居室'],
@@ -676,7 +676,7 @@ function dreamFulfilled() {
   return false;
 }
 
-/* ---------------- 人生图鉴 ---------------- */
+/* ---------------- 故事图鉴（结局标签） ---------------- */
 const ALL_TAGS = {
   '未竟之年': '在成年之前止步',
   '金榜题名': '中考考上重点高中',
@@ -685,16 +685,16 @@ const ALL_TAGS = {
   '心想事成': '实现八岁那年许下的心愿',
   '寒门贵子': '贫寒之家走出重点高中生',
   '无忧无虑': '富贵之家，幸福均值 65 以上',
-  '快乐童年': '幸福均值 70 以上的一生',
-  '心事重重': '幸福均值不足 55 的一生',
+  '快乐童年': '幸福均值 70 以上',
+  '心事重重': '幸福均值不足 55',
   '身怀绝技': '任一技艺练到 5 级',
   '文武双全': '体质与智力都达到 75',
   '小有积蓄': '成年时攒下 120 元',
   '知寒知暖': '贫寒之家暗线：焐热过妈妈的手，也读懂了它',
   '灯火可亲': '小康之家暗线：看懂了饭桌规矩与自行车后座的爱',
   '锦衣知暖': '富贵之家暗线：等到了那顿推掉应酬的生日饭',
-  '莫逆之交': '走完一世的羁绊约定',
-  '年少欢喜': '把那段懵懂心事，走成了约定',
+  '莫逆之交': '走完一程的羁绊约定',
+  '少年知己': '把那段并肩的友谊，走成了约定',
   '水墨传人': '绘画专精 · 师从国画老先生',
   '同人画手': '绘画专精 · 班级同人志的传说',
   '黑白键上': '乐器专精 · 钢琴考级之路',
@@ -732,7 +732,7 @@ function computeTags(cause) {
   if (S.flags.arcDone === 'middle') tags.push('灯火可亲');
   if (S.flags.arcDone === 'rich') tags.push('锦衣知暖');
   if (S.flags.bondDone) tags.push('莫逆之交');
-  if (S.flags.crushDone) tags.push('年少欢喜');
+  if (S.flags.crushDone) tags.push('少年知己');
   Object.keys(SPEC_TAGS).forEach((n) => {
     const dir = S.flags['spec_' + n];
     if (dir && SPEC_TAGS[n][dir]) tags.push(SPEC_TAGS[n][dir]);
@@ -741,7 +741,7 @@ function computeTags(cause) {
 }
 
 /* ---------------- 状态 ---------------- */
-let S = null;          // 当前人生
+let S = null;          // 当前这一程
 let eventLock = false; // 弹窗打开时锁定操作
 let currentEventId = null; // 当前打开的事件（存档用）
 
@@ -1048,7 +1048,7 @@ function checkBondArc() {
   });
 }
 
-/* ---------------- 年少欢喜保底调度 ---------------- */
+/* ---------------- 少年知己保底调度 ---------------- */
 function checkCrushArc() {
   const steps = [
     { age: 12, id: 'crush-1' },
@@ -1752,7 +1752,7 @@ function shortVerdict() {
 
 function buildVerdict(cause) {
   if (cause === 'early') {
-    return `${S.name}，${S.family.name}的孩子。\n${S.age} 岁那年，这段旅程提前画上了句号。\n人生无常，像一盒没吃完就化掉的巧克力。\n\n——愿往后的每个日子，都被温柔以待。`;
+    return `${S.name}，${S.family.name}的孩子。\n${S.age} 岁那年，这段旅程提前画上了句号。\n日子像一盒没吃完就化掉的巧克力。\n\n——愿往后的每个日子，都被温柔以待。`;
   }
   const lines = [];
   lines.push(`${S.name}，${S.family.name}的孩子，在${S.home}长到 ${S.age} 岁。`);
@@ -1781,8 +1781,8 @@ function buildVerdict(cause) {
   if (masterTails.length) lines.push(masterTails.join(''));
   const happy = Math.round(S.happinessSum / S.happinessCnt);
   lines.push(happy >= 60 ? `大多数日子里，你是笑着的。（幸福均值 ${happy}）` : `这一路你常常心事重重。（幸福均值 ${happy}）`);
-  lines.push(`这一生你经历了 ${S.memories.length} 件忘不了的事。`);
-  lines.push('\n人生是一盒巧克力，你永远不知道下一颗什么味道。');
+  lines.push(`这一程攒下了 ${S.memories.length} 件忘不了的事。`);
+  lines.push('\n日子是一盒巧克力，你永远不知道下一颗什么味道。');
   lines.push('这一颗，你尝过了。');
   return lines.join('\n');
 }
@@ -1816,7 +1816,7 @@ function loadJson(key, fb) {
 function saveJson(key, v) {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* 忽略 */ }
 }
-/* 事件图鉴：见过即收集（里程碑人生节拍不计，专精/组合技在技能图鉴盖章） */
+/* 事件图鉴：见过即收集（里程碑节拍不计，专精/组合技在技能图鉴盖章） */
 function codexCollectEvent(id) {
   const set = new Set(loadJson(CODEX_EV_KEY, []));
   if (!set.has(id)) { set.add(id); saveJson(CODEX_EV_KEY, [...set]); }
@@ -1842,7 +1842,7 @@ function codexMergeLife() {
 
 /* ============================================================
  * 存档系统：刷新 / 退出重进，这一程接着走
- * —— 人生仍无法读档重来，只是允许「中场休息」
+ * —— 这一程仍无法读档重来，只是允许「中场休息」
  * ============================================================ */
 function saveGame() {
   if (!S || !S.alive) return;
@@ -1895,11 +1895,11 @@ function endLife(cause) {
   S.alive = false;
   eventLock = false;
   currentEventId = null;
-  clearSave(); // 这一世落幕，存档随之消散
+  clearSave(); // 这一程落幕，存档随之清空
   Sound.play('bell');
   const verdict = buildVerdict(cause);
   const tags = computeTags(cause);
-  codexMergeLife(); // 技能图鉴：这一世的技艺沉淀进跨世档案
+  codexMergeLife(); // 技能图鉴：这一程的技艺沉淀进跨程档案
   saveMemorial({
     name: S.name, gender: S.gender, family: S.family.name,
     age: S.age, days: S.day, verdict: shortVerdict(), cause,
@@ -1922,7 +1922,7 @@ function endLife(cause) {
   const mems = S.memories.slice(-6);
   $('end-memories').innerHTML = '<h3>忘不了的事</h3>' + (mems.length
     ? mems.map((m) => `<p>${m.age} 岁：${m.text}</p>`).join('')
-    : '<p class="dim">平平淡淡，也是一生。</p>');
+    : '<p class="dim">平平淡淡，也很好。</p>');
 }
 
 /* ============================================================
@@ -1930,8 +1930,8 @@ function endLife(cause) {
  * ============================================================ */
 function startLife() {
   newLife();
-  spritePreload(); // 首屏预载若被弱网打败，开新一世时再试一次
-  clearSave(); // 新的一世，旧的存档让位
+  spritePreload(); // 首屏预载若失败，开新一程时再试一次
+  clearSave(); // 新的一程，旧的存档让位
   milestoneQueue = [];
   checkMilestones();
   Sound.play('page');
@@ -2004,7 +2004,7 @@ function renderMemorials() {
         (m.dream ? `<br><span class="dim">心愿：${m.dream}</span>` : '') +
         ((m.tags && m.tags.length) ? `<div class="mem-tags">${m.tags.map((t) => `<span class="tag" title="${ALL_TAGS[t] || ''}">${t}</span>`).join('')}</div>` : '') +
         `</div>`).join('')
-    : '<div class="empty">回忆册还是空白。<br>去认真活一场吧。</div>';
+    : '<div class="empty">回忆册还是空白。<br>去开启第一段故事吧。</div>';
   $('memorial-list').innerHTML = html;
 }
 
@@ -2147,12 +2147,12 @@ window.addEventListener('DOMContentLoaded', () => {
     bgmVol.addEventListener('input', () => Bgm.setVolume(bgmVol.value / 100));
   }
   $('btn-born').onclick = startLife;
-  // 继续上次的人生
+  // 继续上次的旅程
   const bc = $('btn-continue');
   const saved = loadSave();
   if (saved) {
     bc.classList.remove('hidden');
-    bc.textContent = `🌱 继续上次的人生 · ${saved.state.name}（${saved.state.age} 岁 · 第 ${saved.state.day} 天）`;
+    bc.textContent = `🌱 继续上次的旅程 · ${saved.state.name}（${saved.state.age} 岁 · 第 ${saved.state.day} 天）`;
     bc.onclick = () => { resumeLife(); };
   }
   $('btn-reborn').onclick = startLife;
@@ -2239,7 +2239,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================================================
- * 结局 · 人生长卷：小人从 3 岁走到谢幕，沿途挂满记忆
+ * 结局 · 岁月长卷：小人从 3 岁走到谢幕，沿途挂满记忆
  * ============================================================ */
 const ACTOR_INNER = `
   <g class="pose pose-stand"><g class="whole">
@@ -2281,7 +2281,7 @@ function renderLifeScroll(cause) {
       `<div class="mem-tip">${texts.map((t) => `<p>${age} 岁：${t}</p>`).join('')}</div>` +
       `<i class="dot"></i>${texts.length > 1 ? `<b>${texts.length}</b>` : ''}</div>`;
   });
-  // 终点：成年旗 / 告别花
+  // 终点：成年旗 / 纪念花
   html += `<div class="scroll-flag${cause === 'early' ? ' die' : ''}" style="left:${xOf(endAge)}px">${cause === 'early' ? '✿' : '⚑'}</div>`;
   // 行走的小人（随年龄长大）
   const walkW = xOf(endAge) - 60;

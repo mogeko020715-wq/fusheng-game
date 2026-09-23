@@ -49,7 +49,9 @@ const Sound = {
         try { if (navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { /* iOS <17 无此 API */ }
       }
       // 老 iOS 兜底：循环一段近无声的 HTML 音频，把音频会话顶到媒体通道
-      if (!this._duck && typeof Audio !== 'undefined') {
+      // 小工具模式（FUSHENG_NO_BGM）：容器 CSP 禁 data: 媒体，跳过此兜底
+      const minitoolMode = typeof window !== 'undefined' && !!window.FUSHENG_NO_BGM;
+      if (!this._duck && typeof Audio !== 'undefined' && !minitoolMode) {
         try {
           const a = new Audio('data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YcgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
           a.loop = true;

@@ -563,6 +563,7 @@ const ACTOR_SPOT = {
   park:     { walk: 112, slide: 142, fish: 172, watch: 72 },
   river:    { boat: 96, skim: 130, tadpole: 60 },
   school:   { class: 110, skip: 32, club: 114 },
+  palace:   { lesson: 110, exhibit: 74, watchclass: 140, recital: 96 },
   square:   { book: 66, toy: 92, snack: 58, artist: 116, chess: 152 },
   market:   { veg: 92, deli: 124, carry: 52 },
   hospital: { cure: 110, checkup: 94 },
@@ -1352,6 +1353,38 @@ const ART = {
       <path d="M22 102 v-6 M19 96 q3 -4 6 0 M18 102 q2 -5 4 0 M28 102 q2 -6 4 0"/>
     </svg>`,
   },
+  palace: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 100 Q56 82 110 92 T216 86"/>
+      <path d="M180 100 V64 h24 v36 M180 64 l12 -8 12 8" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;-16 0;0 0" dur="23s" repeatCount="indefinite"/>
+        <path d="M46 22 q7 -7 14 0 q8 -5 13 2"/></g>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;8 -4;0 0" dur="13s" repeatCount="indefinite"/>
+        <path d="M30 36 q3 -3 6 0 q3 -3 6 0"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="54" y="34" width="112" height="68"/>
+      <path d="M54 34 L110 16 L166 34"/>
+      <path d="M110 16 V6"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="0 110 8; 5 110 8; -3 110 8; 0 110 8" dur="3.2s" repeatCount="indefinite"/>
+        <path d="M110 8 l20 5 -20 6"/></g>
+      <rect class="win" x="64" y="46" width="14" height="12"/><rect class="win" x="86" y="46" width="14" height="12"/><rect class="win" x="130" y="46" width="14" height="12"/><rect class="win" x="152" y="46" width="14" height="12"/>
+      <rect x="64" y="68" width="34" height="22" stroke-width="1.8"/>
+      <path d="M68 74 h12 M68 79 h20 M68 84 h15" stroke-width="1.4"/>
+      <path d="M104 102 V78 h14 v24"/>
+      <path d="M98 102 h26 M100 97 h22" stroke-width="1.8"/>
+      <path d="M10 102 H210"/>
+      <path d="M186 102 v-10 h16 v10 M189 92 q3 -4 6 0 M198 92 q3 -4 6 0" stroke-width="1.8"/>
+    </svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 92 h36 M10 92 v10 M22 92 v10 M34 92 v10 M46 92 v10"/>
+      <path d="M186 102 q2 -8 4 0 M192 102 q2 -6 4 0"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;30 -14;60 -4;30 4;0 0" dur="10s" repeatCount="indefinite"/>
+        <g><animateTransform attributeName="transform" type="rotate" values="0 84 56; 12 84 56; -8 84 56; 0 84 56" dur="2.4s" repeatCount="indefinite"/>
+          <path d="M84 56 l14 3 -14 3 3 -3 z M87 56 l11 3" stroke-width="1.8"/></g></g>
+      <path d="M170 96 q6 -10 2 -18 q-4 -8 4 -14" stroke-width="1.8" stroke-dasharray="3 4"/>
+    </svg>`,
+  },
   square: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 102 V52 h20 v50 M30 102 V64 h14 v38 M172 102 V58 h20 v44 M196 102 V72 h16 v30"/>
@@ -1430,6 +1463,10 @@ const SCENES = {
   school: {
     title: '学堂', min: 4,
     desc: () => S.age <= 6 ? '幼儿园里全是蜡笔和哭声。' : S.age <= 12 ? '小学的操场，一圈是四百米，一天是六年。' : '中学的教学楼很高，高得像未来。',
+  },
+  palace: {
+    title: '少年宫', min: 5,
+    desc: () => S.flags.art ? '松节油、琴弦和汗味混在一起的地方，你的' + S.flags.art + '教室在三楼。' : '每间教室都传出不一样的声音。走廊里挂满了别的孩子的画。',
   },
   square: {
     title: '广场', min: 3,
@@ -1633,6 +1670,39 @@ const ACTIONS = [
       gain('魅力', 0.8); gainSkill(S.flags.art, 3); gainNeed('娱乐', 10);
       addLog(`你在社团里练习${S.flags.art}，还认识了新朋友。`);
     } },
+  /* ---- 少年宫 ---- */
+  { id: 'lesson', loc: 'palace', label: () => '上' + S.flags.art + '课', cost: 2, cond: () => !!S.flags.art && S.money >= 2, run: () => {
+      gainMoney(-2); gainSkill(S.flags.art, 5); gain('魅力', 0.6); gainNeed('心情', 3);
+      const insp = S.flags.inspireArt === S.day; // 联动：看过展览当日下午上课，格外有感觉
+      if (insp) gainSkill(S.flags.art, 2);
+      const per = { 绘画: '老师走过来看了一眼你的画，说「有进步」。', 乐器: '指尖磨得有点疼，但今天的曲子比上周顺了。', 武术: '压腿压到龇牙咧嘴，教练说你的马步越来越稳。', 编程: '机房的风扇嗡嗡响，你敲出的程序又少了一个 bug。' };
+      addLog(insp ? `展览上看到的东西还在脑子里，今天上${S.flags.art}课格外有感觉。` : pick([per[S.flags.art] || '老师夸你最近用功。', `少年宫的楼梯你一步两级，${S.flags.art}教室在三楼。`, `下课铃响了，你还想再练一会儿${S.flags.art}。`]));
+    } },
+  { id: 'exhibit', loc: 'palace', label: '看展览', cond: () => true, run: () => {
+      gain('魅力', 0.5); gain('智力', 0.3);
+      S.flags.inspireArt = S.day; // 联动：当日上兴趣班/在家练习有灵感
+      addLog(S.flags.art ? pick(['走廊的展板换了新一批，你在一幅一等奖作品前站了很久。', '你仔细看了获奖作品的落款——明年，想让自己的名字也上去。'])
+        : pick(['你一间教室一间教室地看过去，琴声、墨香、口号声，都新鲜。', '展板上的画天马行空，你想：这些真的都是小孩子画的吗？']));
+    } },
+  { id: 'watchclass', loc: 'palace', label: '围观兴趣班', cond: () => !S.flags.art, run: () => {
+      gainNeed('心情', 4); gainNeed('娱乐', 6);
+      if (chance(0.15)) addLog('你把脸贴在教室门玻璃上看了很久。回家的路上，你一直在想这件事。');
+      else addLog(pick(['舞蹈班的音乐漏出门缝，你踮着脚看了一会儿。', '书法教室里安安静静，只听见毛笔划过纸的声音。', '航模班的哥哥姐姐在试飞，一架小飞机撞上了天花板。']));
+    } },
+  { id: 'recital', loc: 'palace', label: '汇报演出', cond: () => !!S.flags.art && (S.skills[S.flags.art] || { lvl: 1 }).lvl >= 3 && S.flags.recitalAge !== S.age, run: () => {
+      S.flags.recitalAge = S.age;
+      const pass = S.attrs.魅力 + rand(0, 30) >= 55;
+      const what = { 绘画: '现场作画', 乐器: '独奏', 武术: '套路表演', 编程: '作品演示' }[S.flags.art] || '表演';
+      if (pass) {
+        gain('魅力', 2); gainNeed('心情', 12);
+        remember(`少年宫汇报演出，你的${what}赢得满堂彩。下台的时候，腿还是抖的。`);
+        addLog(`幕布拉开，追光打在你身上。你的${what}结束的那一刻，掌声响了很久。`, 'event');
+      } else {
+        gain('魅力', 0.8); gainNeed('心情', 6);
+        remember(`少年宫汇报演出你出了个小岔子，但台下的掌声一点没少。`);
+        addLog(`演到一半出了个小岔子，你的脸一下子热了。可台下还是鼓了掌——有人喊了声「好！」，你鞠了个躬，笑了。`, 'event');
+      }
+    } },
   /* ---- 广场 ---- */
   { id: 'book', loc: 'square', label: '书店买书', cost: 8, cond: () => S.money >= 8, run: () => {
       gainMoney(-8); gain('智力', 1.2);
@@ -1708,6 +1778,10 @@ const ACT_HINTS = {
   class: { 精力: -8, 娱乐: -6, 心情: -3 },
   skip: { 娱乐: 10, 心情: 6 },
   club: { 娱乐: 10 },
+  lesson: { 心情: 3 },
+  exhibit: {},
+  watchclass: { 心情: 4, 娱乐: 6 },
+  recital: { 心情: 12 },
   toy: { 娱乐: 32, 心情: 8 },
   snack: { 饱食: 26, 心情: 4 },
   artist: { 娱乐: 14, 心情: 4 },
@@ -2215,6 +2289,7 @@ const TAP_LINES = {
   park: ['你摸了摸老槐树粗糙的皮。', '湖面被风撩起一层细纹。', '长椅上落着一片很圆的叶子。', '远处有人放风筝，线绷得笔直。', '石凳被太阳晒得暖烘烘的。'],
   river: ['河水不急，打着小小的旋。', '岸边的芦苇搔着风的痒。', '一只蜻蜓点了点水，飞走了。', '鹅卵石被河水磨得圆溜溜的。', '下游传来捣衣声，一下，又一下。'],
   school: ['黑板上还留着上节课的板书。', '窗台上的粉笔灰积了薄薄一层。', '操场的国旗被风吹得猎猎响。', '教室后排的绿萝爬上了窗框。', '广播里传来眼保健操的前奏。'],
+  palace: ['空气里有一点松节油的味道。', '走廊里的回音，比教室里的大。', '奖状橱窗擦得一尘不染。', '楼梯转角有一面大镜子，你冲它做了个鬼脸。', '练琴房漏出半截音阶，弹错了一个音，重来。'],
   square: ['糖炒栗子的香味飘了半条街。', '杂货铺的风铃叮当作响。', '电线杆上贴满了花花绿绿的广告。', '卖气球的老伯打了个盹。', '石板路被鞋底磨得发亮。'],
   market: ['鱼摊的水花溅了一地。', '豆腐摊冒着白白的热气。', '秤砣碰着秤盘，当啷一声。', '青菜叶上还挂着早上的露水。', '拐角的花椒麻了半条巷子。'],
   hospital: ['走廊尽头的窗外有一棵梧桐。', '消毒水味里混着一点饭香。', '护士站的呼叫灯闪了一下。', '长椅上的爷爷在给人让座位。', '宣传栏贴着洗手七步法。'],

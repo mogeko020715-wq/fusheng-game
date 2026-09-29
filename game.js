@@ -561,6 +561,7 @@ const ACTOR_HOME_X = 30;
 const ACTOR_SPOT = {
   home:     { sleep: 106, meal: 100, wash: 22, play: 66, study: 110, exercise: 36, chore: 82, art: 118, cook: 102, chat: 90 },
   park:     { walk: 112, slide: 142, fish: 172, watch: 72 },
+  river:    { boat: 96, skim: 130, tadpole: 60 },
   school:   { class: 110, skip: 32, club: 114 },
   square:   { book: 66, toy: 92, snack: 58, artist: 116, chess: 152 },
   market:   { veg: 92, deli: 124, carry: 52 },
@@ -1300,6 +1301,37 @@ const ART = {
         <path d="M96 74 q-4 -4 -1 -7 q3 1 3 5 q0 -4 3 -5 q3 3 -1 7 z"/></g>
     </svg>`,
   },
+  river: {
+    far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 96 Q50 78 96 88 T216 84"/>
+      <path d="M150 84 q14 -22 30 0 M156 84 v-6 M174 84 v-6" stroke-width="1.8"/>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;18 0;0 0" dur="24s" repeatCount="indefinite"/>
+        <path d="M52 20 q7 -7 14 0 q8 -5 13 2"/></g>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;10 -2;0 0" dur="11s" repeatCount="indefinite"/>
+        <path d="M196 30 l5 6 -5 6 -5 -6 z"/></g>
+    </svg>`,
+    mid: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 78 H212"/>
+      <g stroke-width="1.6" stroke-dasharray="10 8">
+        <path d="M14 86 H206"><animate attributeName="stroke-dashoffset" values="0;-36" dur="3.6s" repeatCount="indefinite"/></path>
+        <path d="M24 94 H196"><animate attributeName="stroke-dashoffset" values="0;-36" dur="4.4s" repeatCount="indefinite"/></path>
+        <path d="M40 101 H180"><animate attributeName="stroke-dashoffset" values="0;-36" dur="5.2s" repeatCount="indefinite"/></path>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" values="-2.4 30 78; 2.4 30 78; -2.4 30 78" dur="4.8s" repeatCount="indefinite"/>
+        <path d="M30 78 V40"/><path d="M30 40 q-9 -8 -4 -20 M30 44 q9 -10 4 -22" stroke-width="1.8"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" values="2 52 78; -2 52 78; 2 52 78" dur="5.5s" repeatCount="indefinite"/>
+        <path d="M52 78 V52"/><path d="M52 52 q-7 -6 -3 -16" stroke-width="1.8"/></g>
+      <ellipse cx="120" cy="76" rx="9" ry="3.4"/><ellipse cx="146" cy="77" rx="7" ry="2.8"/><ellipse cx="98" cy="77" rx="5.6" ry="2.2"/>
+      <path d="M10 108 H210" stroke-dasharray="5 6"/>
+    </svg>`,
+    near: `<svg viewBox="0 0 220 110" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 102 q2 -7 4 0 M22 102 q2 -9 4 0 M196 102 q2 -8 4 0 M202 102 q2 -6 4 0"/>
+      <circle cx="70" cy="90" r="2" stroke-width="1.6"><animate attributeName="r" values="1;7" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values=".8;0" dur="3s" repeatCount="indefinite"/></circle>
+      <circle cx="160" cy="94" r="2" stroke-width="1.6"><animate attributeName="r" values="1;6" dur="3.6s" begin="-1.4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="3.6s" begin="-1.4s" repeatCount="indefinite"/></circle>
+      <g><animateTransform attributeName="transform" type="translate" values="0 0;26 -8;52 0;26 6;0 0" dur="9s" repeatCount="indefinite"/>
+        <path d="M96 60 q3 -3 6 0 q-3 3 -6 0 z M99 57 v-4 M99 63 v4" stroke-width="1.6"/></g>
+    </svg>`,
+  },
   school: {
     far: `<svg viewBox="0 0 220 110" fill="none" stroke="#8a867d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 102 V66 h26 v36 M186 102 V72 h22 v30"/>
@@ -1390,6 +1422,10 @@ const SCENES = {
   park: {
     title: '公园', min: 3,
     desc: () => '众生市的老公园，树比楼多，风比人闲。',
+  },
+  river: {
+    title: '河边', min: 3,
+    desc: () => S.age <= 9 ? '绕城的小河，水不深，鱼不大，刚好装得下一个下午。' : '还是那条河。水好像浅了，其实是你长高了。',
   },
   school: {
     title: '学堂', min: 4,
@@ -1548,6 +1584,48 @@ const ACTIONS = [
       S.flags.inspireArt = S.day; // 联动：当日练习技艺有灵感
       addLog(pick(['你看蚂蚁搬家、看蜻蜓点水，一看就是半天。', '你蹲在花坛边，看一只蜗牛爬完整片叶子。']));
     } },
+  /* ---- 河边 ---- */
+  { id: 'boat', loc: 'river', label: '放纸船', cond: () => true, run: () => {
+      gainNeed('娱乐', 10); gainNeed('心情', 6);
+      const roll = Math.random();
+      if (roll < 0.12) {
+        addLog('纸船转了个弯，慢慢沉下去了。你看着它，像看一场小小的告别。');
+      } else if (roll < 0.24) {
+        gainNeed('心情', 4);
+        remember('你放的一只纸船，顺着河漂出了视线。它要去的地方，比你谁都远。');
+        addLog('纸船顺着水漂啊漂，拐过河湾，不见了。你踮着脚看了很久。', 'event');
+      } else {
+        addLog(pick(['你把纸船轻轻放进水里，它打了个转，顺流走了。', '纸船载着一片树叶，像载着一位乘客。', '你沿着岸边跟着船跑，跑得比水还快。', '风帮你推了一把，纸船走得笔直。', '又一只纸船下水了。这条河上，你是造船最多的人。']));
+      }
+    } },
+  { id: 'skim', loc: 'river', label: '打水漂', cond: () => S.age >= 5, run: () => {
+      gainNeed('娱乐', 12); gain('体质', 0.4);
+      const skill = Math.min(3, Math.floor((S.attrs.体质 || 30) / 35));
+      const n = Math.max(0, Math.floor(Math.random() * 4) + skill - 1);
+      if (n <= 0) addLog(pick(['石头「扑通」一声直接沉了，连个水花都没给你。', '你挑的石头太圆了，它在手里犹豫了一下，还是沉了。']));
+      else {
+        const best = S.flags.skimBest || 0;
+        if (n > best && best > 0) {
+          S.flags.skimBest = n;
+          gainNeed('心情', 8);
+          remember(`你打水漂打出了${n}连，是你的最高纪录。`);
+          addLog(`石头在水面跳了${n}下！新纪录！你激动得蹦了起来。`, 'event');
+        } else {
+          if (n > best) S.flags.skimBest = n;
+          addLog(pick([`石头在水面跳了${n}下，荡开一圈一圈的圆。`, `你侧着身子甩出去，${n}个水漂，漂亮。`]));
+        }
+      }
+    } },
+  { id: 'tadpole', loc: 'river', label: '捉蝌蚪', cond: () => S.age <= 10, run: () => {
+      gainNeed('娱乐', 16); gainNeed('心情', 5); gainNeed('清洁', -6);
+      const roll = Math.random();
+      if (roll < 0.3 && !S.flags.tadpole) {
+        S.flags.tadpole = S.day;
+        remember('你捉到一只蝌蚪，养在玻璃瓶里，放在窗台上。');
+        addLog('你捧起一只蝌蚪，它在你手心里扭来扭去。你把它装进了玻璃瓶。', 'event');
+      } else if (roll < 0.5) addLog(pick(['蝌蚪从你指缝里溜走了，滑溜溜的，谁也抓不住。', '你蹲了半天，蝌蚪们围着你的手游，就是不肯进来。']));
+      else addLog(pick(['你蹲在岸边看蝌蚪，黑压压的一群，像会游的逗号。', '水草一晃动，蝌蚪们「呼」地散开了。', '你把手伸进凉凉的河水里，蝌蚪挠得手心痒痒的。']));
+    } },
   /* ---- 学堂 ---- */
   { id: 'class', loc: 'school', label: () => '去' + schoolTitle() + '上课', cond: () => !S.flags.wentSchool && S.slot <= 3, run: goSchool },
   { id: 'skip', loc: 'school', label: '逃课', cond: () => S.age >= 7 && !S.flags.wentSchool && S.slot <= 3, run: skipSchool },
@@ -1623,6 +1701,9 @@ const ACT_HINTS = {
   walk: { 心情: 7 },
   slide: { 娱乐: 24, 心情: 6 },
   fish: { 娱乐: 14 },
+  boat: { 娱乐: 10, 心情: 6 },
+  skim: { 娱乐: 12 },
+  tadpole: { 娱乐: 16, 心情: 5, 清洁: -6 },
   watch: { 心情: 3 },
   class: { 精力: -8, 娱乐: -6, 心情: -3 },
   skip: { 娱乐: 10, 心情: 6 },
@@ -2132,6 +2213,7 @@ function detectFlexGap() {
 const TAP_LINES = {
   home: ['窗台上的绿植又长了一片新叶。', '厨房的钟，走得比学校的慢。', '门垫有点歪，你顺手摆正了。', '挂钟滴答滴答，家里很安心。', '米缸盖子没盖严，你按了一下。'],
   park: ['你摸了摸老槐树粗糙的皮。', '湖面被风撩起一层细纹。', '长椅上落着一片很圆的叶子。', '远处有人放风筝，线绷得笔直。', '石凳被太阳晒得暖烘烘的。'],
+  river: ['河水不急，打着小小的旋。', '岸边的芦苇搔着风的痒。', '一只蜻蜓点了点水，飞走了。', '鹅卵石被河水磨得圆溜溜的。', '下游传来捣衣声，一下，又一下。'],
   school: ['黑板上还留着上节课的板书。', '窗台上的粉笔灰积了薄薄一层。', '操场的国旗被风吹得猎猎响。', '教室后排的绿萝爬上了窗框。', '广播里传来眼保健操的前奏。'],
   square: ['糖炒栗子的香味飘了半条街。', '杂货铺的风铃叮当作响。', '电线杆上贴满了花花绿绿的广告。', '卖气球的老伯打了个盹。', '石板路被鞋底磨得发亮。'],
   market: ['鱼摊的水花溅了一地。', '豆腐摊冒着白白的热气。', '秤砣碰着秤盘，当啷一声。', '青菜叶上还挂着早上的露水。', '拐角的花椒麻了半条巷子。'],

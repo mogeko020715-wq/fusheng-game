@@ -584,7 +584,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'dream-form', maxLife: 1, title: '志愿填报', min: 17, max: 17, weight: 4,
+    id: 'dream-form', maxLife: 1, title: '志愿填报', min: 17, max: 17, weight: 4, cg: 'cg-dream-form',
     text: (s) => {
       const dreams = { science: '科学家', sports: '运动员', art: '艺术家', food: '美食家', money: '有钱人' };
       const d = dreams[s.flags.dream];
@@ -737,7 +737,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'rich-finale-a', title: '生日那天', min: 13, max: 17, weight: 5,
+    id: 'rich-finale-a', title: '生日那天', min: 13, max: 17, weight: 5, cg: 'cg-rich-finale',
     cond: (s) => s.familyKey === 'rich' && s.flags.richArc1 && s.flags.richArc2 && !s.flags.richFinale,
     text: '你生日。你以为今年又是司机接送、蛋糕代订。\n可傍晚，门响了——爸爸拎着菜，妈妈系着围裙，他们推掉了所有应酬。\n妈妈的手艺很生疏，糖醋排骨有点糊。但灯全亮着，人在，家就在。',
     choices: [
@@ -941,7 +941,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'crush-3a', title: '同一座城市的约定', min: 16, max: 17, weight: 5,
+    id: 'crush-3a', title: '同一座城市的约定', min: 16, max: 17, weight: 5, cg: 'cg-crush-date',
     cond: (s) => s.flags.crushA1 && s.flags.crushA2 && !s.flags.crushDone && !s.flags['seen:crush-3a'],
     text: (s) => {
       const t = s.gender === '男' ? '她' : '他';

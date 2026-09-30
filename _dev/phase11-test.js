@@ -117,6 +117,31 @@ const driver = `
   R.giftRefund = dreamCandy() === cBefore && S.pocket.length === 6;
   R.wardrobeTeaser = !!(find('小小衣柜') && find('小小衣柜').disabled === true);
 
+  // 8. 同心结复撞变体 + 未见优先（临时把 s 段池子换成只剩一个心结，避免被当成 boss）
+  dreamInit();
+  S.age = 5;
+  const foe8 = DREAM_FOES.s[3]; // 关灯后的房间
+  const log0 = () => document.getElementById('dream-log').children[0].textContent;
+  const _poolS = DREAM_FOES.s;
+  DREAM_FOES.s = [foe8];
+  dreamEncounter();
+  const firstIntro = log0();
+  R.firstNotBoss = D.foe.isBoss === false;
+  D.foe = null;
+  dreamEncounter();
+  R.againIntro = firstIntro === foe8.intro && log0() === foe8.intro2 && D.foe.isBoss === false;
+  D.foe.hp = 1; dreamTurn('atk'); // 第一次化开 → win
+  const win1 = log0();
+  dreamEncounter();
+  D.foe.hp = 1; dreamTurn('atk'); // 第二次化开 → win2
+  R.againWin = win1.indexOf(foe8.win) === 0 && log0().indexOf(foe8.win2) === 0;
+  DREAM_FOES.s = _poolS;
+  dreamInit();
+  dreamEncounter();
+  const id1 = D.foe.id; D.foe = null;
+  dreamEncounter();
+  R.unseenFirst = id1 !== D.foe.id; // 未见优先：第二次必是没见过的心结
+
   console.log(JSON.stringify(R));
   const pass = Object.values(R).every(Boolean);
   console.log(pass ? 'PHASE11 TEST PASSED' : 'PHASE11 TEST FAILED');

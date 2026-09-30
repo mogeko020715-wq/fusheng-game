@@ -2617,19 +2617,19 @@ function renderShop() {
  * 护栏：惊醒只扣 心情-5/健康-2；随时可醒来；战斗属性全部由养成数值换算 */
 const DREAM_FOES = {
   s: [ // 3-6 岁
-    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里变得好大好大，白大褂的衣角扫过地板。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。' },
-    { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 4, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。' },
-    { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 4, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。' },
-    { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。' },
+    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里变得好大好大，白大褂的衣角扫过地板。', intro2: '白大褂的影子又追上来了，针尖一闪一闪。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。', win2: '你又盯着它看了一会儿。影子好像比上次更小了。' },
+    { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 4, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', intro2: '那只大狗还在巷口。看见你，它的尾巴先摇了半下，又停住了。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。', win2: '这次它直接蹭了蹭你的手，毛茸茸的。' },
+    { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 4, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', intro2: '雷声又滚过来了。可你已经知道怎么数它了。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。', win2: '三、二、一——雷声这次走得更远了。' },
+    { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', intro2: '房间又黑下来了，椅子还蹲在老地方。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。', win2: '「啪」。还是只有你的椅子。你早就知道了。' },
   ],
   m: [ // 7-12 岁
-    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，59 分被黑笔重重圈了两圈，大得占满了整张纸。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。' },
-    { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 6, intro: '几个高个子影子拦在路中间，笑声闷闷的。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。' },
-    { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 5, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。' },
+    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，59 分被黑笔重重圈了两圈，大得占满了整张纸。', intro2: '卷子又摊开了，那个分数还是那么大。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。', win2: '你把卷子又折好了一次。它好像没有上次那么沉了。' },
+    { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 6, intro: '几个高个子影子拦在路中间，笑声闷闷的。', intro2: '那几个影子又拦在路中间，笑得没有上次响了。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。', win2: '你走过去的时候，影子们让得比上次更快了。' },
+    { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 5, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', intro2: '客厅又空了，钟摆还是敲得很响。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。', win2: '你熟门熟路地打开了所有的灯，还去添了碗饭。' },
   ],
   l: [ // 13-17 岁
-    { id: 'rank', cg: 'cg-dream-rank', name: '红榜的影子', hp: 34, atk: 7, intro: '一张望不到头的榜单，你的名字在很后面很后面。', win: '你把目光从别人的名字上收回来。你的路，不在那张纸上。' },
-    { id: 'farewell', cg: 'cg-dream-farewell', name: '毕业的钟声', hp: 32, atk: 7, intro: '钟声一响，教室里的身影一个个变淡，你怎么喊都没有人回头。', win: '你不再喊了。你记住他们的样子，然后朝前走。' },
+    { id: 'rank', cg: 'cg-dream-rank', name: '红榜的影子', hp: 34, atk: 7, intro: '一张望不到头的榜单，你的名字在很后面很后面。', intro2: '榜单又立在那里，长得没有尽头。', win: '你把目光从别人的名字上收回来。你的路，不在那张纸上。', win2: '你又把目光收了回来。一次比一次容易。' },
+    { id: 'farewell', cg: 'cg-dream-farewell', name: '毕业的钟声', hp: 32, atk: 7, intro: '钟声一响，教室里的身影一个个变淡，你怎么喊都没有人回头。', intro2: '钟声又响了，教室里的身影又开始变淡。', win: '你不再喊了。你记住他们的样子，然后朝前走。', win2: '你朝变淡的身影挥了挥手，然后朝前走。' },
   ],
 };
 const DREAM_BOSSES = {
@@ -2655,6 +2655,7 @@ function dreamInit() {
     dodge: 0.05 + S.attrs.魅力 * 0.0015,
     steps: 10 + Math.floor(Math.random() * 5), pos: 0,
     candy: 0, usedArts: {}, cleared: false, bless: {},
+    seenFoes: {}, wonFoes: {},
     foe: null, foeDodge: 0, marbleDodge: 0,
   };
   D.hp = D.maxHp; D.mp = D.maxMp;
@@ -2708,10 +2709,18 @@ function dreamRender() {
   }
 }
 const DREAM_ART_SKILL = {
-  绘画: { name: '纸盾', run: (lvl) => { D.foeShield = lvl >= 4 ? 3 : 2; dreamLog(lvl >= 4 ? '你画出一面厚厚的纸盾，边角还描了花，稳稳挡在身前。' : '你画出一面纸盾，挡在身前。'); } },
-  乐器: { name: '安眠曲', run: (lvl) => { D.foeCalm = lvl >= 4 ? 3 : 2; dreamLog(lvl >= 4 ? '你哼起一段长长的曲子，心结听得入了神，动作慢了下来。' : '你哼起一段曲子，心结的动作慢了下来。'); } },
-  武术: { name: '连环踢', run: (lvl) => { const per = Math.round(D.atk * (0.5 + 0.1 * lvl)); D.foe.hp -= per * 2; dreamLog(`你连环两脚踢出，心结晃了两晃（-${per}、-${per}）。`); } },
-  编程: { name: '修一修', run: (lvl) => { const h = Math.round(D.maxHp * (0.15 + 0.05 * lvl)); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(`你把坏掉的地方修补了一下（勇气 +${h}）。`); } },
+  绘画: { name: '纸盾', run: (lvl) => {
+    if (D.foeShield > 0) dreamLog('纸盾还稳稳的，你又把它补厚了一点。');
+    else dreamLog(lvl >= 4 ? '你画出一面厚厚的纸盾，边角还描了花，稳稳挡在身前。' : '你画出一面纸盾，挡在身前。');
+    D.foeShield = lvl >= 4 ? 3 : 2;
+  } },
+  乐器: { name: '安眠曲', run: (lvl) => {
+    if (D.foeCalm > 0) dreamLog('心结已经慢下来了，曲子飘在云上。');
+    else dreamLog(lvl >= 4 ? '你哼起一段长长的曲子，心结听得入了神，动作慢了下来。' : '你哼起一段曲子，心结的动作慢了下来。');
+    D.foeCalm = lvl >= 4 ? 3 : 2;
+  } },
+  武术: { name: '连环踢', run: (lvl) => { const per = Math.round(D.atk * (0.5 + 0.1 * lvl)); D.foe.hp -= per * 2; dreamLog(pick([`你连环两脚踢出，心结晃了两晃（-${per}、-${per}）。`, `你转身一记扫踢接正蹬，心结连连后退（-${per}、-${per}）。`])); } },
+  编程: { name: '修一修', run: (lvl) => { const h = Math.round(D.maxHp * (0.15 + 0.05 * lvl)); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(pick([`你把坏掉的地方修补了一下（勇气 +${h}）。`, `你找到那根松掉的线头，轻轻一按，就好了（勇气 +${h}）。`])); } },
 };
 function dreamPickSkill() {
   if (!D) return;
@@ -2814,13 +2823,20 @@ function dreamCandyShop() {
   acts.appendChild(back);
 }
 function dreamEncounter(boss) {
-  const f = boss || pick(DREAM_FOES[dreamBand()]);
+  let f = boss;
+  if (!f) {
+    const pool = DREAM_FOES[dreamBand()];
+    const unseen = pool.filter((x) => !D.seenFoes[x.id]);
+    f = pick(unseen.length ? unseen : pool); // 优先没见过的心结，都见过了才复撞
+  }
+  const again = !!D.seenFoes[f.id];
+  D.seenFoes[f.id] = true;
   D.foe = Object.assign({}, f, { maxHp: f.hp, isBoss: !!boss });
   D.foeShield = 0; D.foeCalm = 0;
   const cg = $('dream-cg');
   if (f.cg) { cg.src = 'assets/cg/' + f.cg + '.png'; cg.classList.remove('hidden'); }
   else { cg.classList.add('hidden'); cg.removeAttribute('src'); }
-  dreamLog(f.intro);
+  dreamLog(again && f.intro2 ? f.intro2 : f.intro);
   dreamRender();
 }
 function dreamTurn(kind, art) {
@@ -2829,7 +2845,13 @@ function dreamTurn(kind, art) {
   if (kind === 'atk') {
     const d = Math.round(D.atk + rand(0, 4));
     f.hp -= d;
-    dreamLog(pick([`你迎上去，稳稳地站住了（-${d}）。`, `你往前一步，心结就退了一步（-${d}）。`]));
+    dreamLog(pick([
+      `你迎上去，稳稳地站住了（-${d}）。`,
+      `你往前一步，心结就退了一步（-${d}）。`,
+      `你攥紧小拳头挥过去，心结晃了一晃（-${d}）。`,
+      `你没有躲。心结撞上你，反倒自己淡了淡（-${d}）。`,
+      `你大喊了一声——不知道喊的什么，反正心结抖了一下（-${d}）。`,
+    ]));
   } else if (kind === 'skill') {
     const lvl = art ? (S.skills[art] || { lvl: 0 }).lvl : 0;
     if (art && lvl >= 2) {
@@ -2841,24 +2863,30 @@ function dreamTurn(kind, art) {
       D.mp -= 4;
       const d = Math.round(S.attrs.智力 * 0.15 + rand(0, 3));
       f.hp -= d;
-      dreamLog(`你开动脑筋想了想，心结的破绽露了出来（-${d}）。`);
+      dreamLog(pick([
+        `你开动脑筋想了想，心结的破绽露了出来（-${d}）。`,
+        `你歪着头打量它——原来这个地方一碰就散（-${d}）。`,
+        `你想起白天学到的东西，照着试了试（-${d}）。`,
+      ]));
     } else { return dreamRender(); }
   } else if (kind === 'item') {
     return dreamPickItem();
   } else if (kind === 'flee') {
     if (chance(0.7)) {
-      dreamLog('你悄悄退开了。心结没有追上来。');
+      dreamLog(pick(['你悄悄退开了。心结没有追上来。', '你踮着脚退开几步，心结没有发现。']));
       D.foe = null; D.marbleDodge = 0; D.pos = Math.max(0, D.pos - 1);
       dreamRender();
       return;
     }
-    dreamLog('你想退开，心结却缠了上来——');
+    dreamLog(pick(['你想退开，心结却缠了上来——', '你刚转身，心结就贴了过来——']));
   }
   // 心结化开判定
   if (f.hp <= 0) {
     const gain_candy = f.isBoss ? 8 : 1 + (chance(0.4) ? 1 : 0);
     D.candy += gain_candy;
-    dreamLog(f.win + `（星星糖 +${gain_candy}）`);
+    const winTxt = (D.wonFoes[f.id] && f.win2) ? f.win2 : f.win; // 当晚再次化开同一心结，用短变体
+    D.wonFoes[f.id] = true;
+    dreamLog(winTxt + `（星星糖 +${gain_candy}）`);
     D.foe = null; D.marbleDodge = 0;
     Sound.play('chime');
     if (f.isBoss) { D.cleared = true; dreamWake('good'); return; }
@@ -2871,12 +2899,18 @@ function dreamTurn(kind, art) {
   let hurt = Math.max(1, Math.round(atk - D.def + rand(0, 2)));
   if (D.foeShield > 0) { hurt = Math.max(0, hurt - 6); D.foeShield--; }
   if (Math.random() < D.dodge + (D.marbleDodge || 0)) {
-    dreamLog('你身子一侧，心结扑了个空。');
+    dreamLog(pick(['你身子一侧，心结扑了个空。', '你蹲下一低头，心结从头顶掠了过去。', '你往旁边跳了半步，心结撞了个寂寞。']));
   } else if (hurt > 0) {
     D.hp -= hurt;
-    dreamLog(pick([`心结扑面袭来，你有点招架不住（勇气 -${hurt}）。`, `一阵发怵从脚底漫上来（勇气 -${hurt}）。`]));
+    dreamLog(pick([
+      `心结扑面袭来，你有点招架不住（勇气 -${hurt}）。`,
+      `一阵发怵从脚底漫上来（勇气 -${hurt}）。`,
+      `心结的影子压过来，你往后缩了半步（勇气 -${hurt}）。`,
+      `你心里咯噔一下，手心有点出汗（勇气 -${hurt}）。`,
+      `那一下有点疼，你倒吸了一口气（勇气 -${hurt}）。`,
+    ]));
   } else {
-    dreamLog('纸盾稳稳接住了这一下。');
+    dreamLog(pick(['纸盾稳稳接住了这一下。', '纸盾轻轻一歪，把那一下卸掉了。', '咚。纸盾没事，你也没事。']));
   }
   if (D.hp <= 0) { dreamWake('scared'); return; }
   // CG 是遭遇的一眼亮相：首个回合后收起，战斗界面恢复紧凑（桌面 800px 高也能一眼看到全部按钮）

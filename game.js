@@ -768,6 +768,7 @@ function newLife() {
              bond: pick(['pang', 'transfer', 'sis', 'chess']) },
     location: 'home',
     memories: [],          // 大事记
+    pocket: [],            // 口袋：道具 6 格同类叠 3
     eventCooldown: 0,
     log: [],
     alive: true,
@@ -1495,6 +1496,7 @@ function idleRun(pool, finds) {
       gainNeed('心情', 5);
       if (f.mem) remember(f.mem);
       addLog(f.txt, 'event');
+      if (f.item) { if (addItem(f.item)) addLog(`你把「${ITEMS[f.item].name}」揣进了口袋。`, 'sys'); }
     } else {
       addLog(pick(pool));
     }
@@ -1513,7 +1515,7 @@ const IDLE_HOME = [
   '你发了半天呆，回过神来，嘴角是翘着的。',
 ];
 const IDLE_HOME_FINDS = [
-  { txt: '你在沙发缝里摸到一颗玻璃珠，对着光看了一下午。', mem: '沙发缝里藏着一颗玻璃珠，像藏着一个小小的宇宙。' },
+  { txt: '你在沙发缝里摸到一颗玻璃珠，对着光看了一下午。', mem: '沙发缝里藏着一颗玻璃珠，像藏着一个小小的宇宙。', item: 'marble' },
   { txt: '你翻旧课本，抖出一张夹了三年的糖纸，还亮晶晶的。', mem: '旧课本里夹着一张糖纸，甜味早就没了，颜色还在。' },
   { txt: '窗台上落着一只迷路的瓢虫，你把它送回了花盆里。', mem: '你把一只迷路的瓢虫送回了家。它背上刚好七颗星。' },
 ];
@@ -1530,10 +1532,44 @@ const IDLE_PARK = [
   '你数着云，一朵，两朵……数着数着就忘了数。',
 ];
 const IDLE_PARK_FINDS = [
-  { txt: '你在草丛里捡到一颗花纹特别的玻璃珠，蓝得像一小块湖。', mem: '草丛里有一颗蓝色的玻璃珠，像谁不小心掉的湖。' },
+  { txt: '你在草丛里捡到一颗花纹特别的玻璃珠，蓝得像一小块湖。', mem: '草丛里有一颗蓝色的玻璃珠，像谁不小心掉的湖。', item: 'marble' },
   { txt: '你在树根下发现一队搬家的蚂蚁，蹲着护送它们走了很远。', mem: '你护送一队蚂蚁搬了家，觉得自己像个巨人国的骑士。' },
   { txt: '一片云长得太像鲸鱼了，你盯着它游过了整个天空。', mem: '有一朵像鲸鱼的云，游过了你整个下午的天空。' },
 ];
+
+/* ---------------- 口袋：道具双场景通用（梦内战斗用 / 梦外生活用） ----------------
+ * 6 格、同类叠 3；每个道具带一句「来历」；dream 字段为梦境小径（第十期）预留 */
+const ITEMS = {
+  tanghulu: { name: '糖葫芦', icon: '<circle cx="12" cy="7" r="3.2"/><circle cx="12" cy="13" r="3.2"/><circle cx="12" cy="19" r="3.2"/><path d="M12 22 v2"/>', use: { 饱食: 8, 心情: 3 }, dream: 'HP +15', price: 3, lore: '山楂裹着糖衣，咬下去先是脆的。' },
+  soda: { name: '橘子汽水', icon: '<path d="M9 3 h6 v3 l1.5 3 v11 a1.5 1.5 0 0 1 -1.5 1.5 h-6 a1.5 1.5 0 0 1 -1.5 -1.5 v-11 l1.5 -3 z"/><path d="M8 12 h8"/>', use: { 精力: 6, 心情: 2 }, dream: 'MP +10', price: 2, lore: '开盖「呲」的一声，橘子味的气泡冲上来。' },
+  noodle: { name: '干脆面', icon: '<rect x="5" y="6" width="14" height="15" rx="1.5"/><path d="M8 10 q2 1.6 4 0 q2 -1.6 4 0 M8 14 q2 1.6 4 0 q2 -1.6 4 0"/><path d="M9 3 l2 2 M15 3 l-2 2"/>', use: { 饱食: 10, 娱乐: 4 }, dream: 'HP +8', price: 2, lore: '捏碎了撒调料，摇一摇，最后一口渣最香。' },
+  bento: { name: '家常便当', icon: '<rect x="4" y="8" width="16" height="11" rx="2"/><path d="M4 12 h16 M12 8 v11"/><path d="M9 4 q3 -2 6 0"/>', use: { 饱食: 42 }, dream: 'HP +30', price: 0, lore: '自己下厨做的，卖相一般，味道诚实。' },
+  moms: { name: '妈妈的味道', icon: '<rect x="4" y="8" width="16" height="11" rx="2"/><path d="M4 12 h16 M12 8 v11"/><path d="M9 4 q3 -2 6 0"/><path d="M17 3 q1 1.4 0 2.6 M19.5 2.4 q1.2 1.7 0 3.2"/>', use: { 饱食: 55, 心情: 8 }, dream: 'HP +60 / 心情 +10', price: 0, lore: '装进饭盒的时候，还是热的。' },
+  marble: { name: '玻璃珠', icon: '<circle cx="12" cy="12" r="7"/><path d="M8 10 q2 -2 5 -1 M9 15 q3 2 6 -1"/>', use: { 心情: 2 }, dream: '本场闪避 +10%', price: 0, lore: '对着光看，里面有一道彩色的漩涡。' },
+};
+const POCKET_SLOTS = 6, POCKET_STACK = 3;
+function addItem(id, n = 1) {
+  if (!ITEMS[id]) return false;
+  S.pocket = S.pocket || [];
+  const slot = S.pocket.find((p) => p.id === id && p.n < POCKET_STACK);
+  if (slot) { slot.n = Math.min(POCKET_STACK, slot.n + n); return true; }
+  if (S.pocket.length >= POCKET_SLOTS) return false;
+  S.pocket.push({ id, n: Math.min(POCKET_STACK, n) });
+  return true;
+}
+function useItem(id) {
+  S.pocket = S.pocket || [];
+  const i = S.pocket.findIndex((p) => p.id === id && p.n > 0);
+  if (i < 0) return false;
+  const it = ITEMS[id];
+  Object.entries(it.use).forEach(([k, v]) => gainNeed(k, v));
+  addLog(`你摸出「${it.name}」。${it.lore}`);
+  S.pocket[i].n--;
+  if (S.pocket[i].n <= 0) S.pocket.splice(i, 1);
+  Sound.play('pop');
+  render();
+  return true;
+}
 
 const ACTIONS = [
   /* ---- 家 ---- */
@@ -1579,6 +1615,9 @@ const ACTIONS = [
       gainNeed('饱食', 42); gainSkill('烹饪', 3);
       if ((S.skills.烹饪 || { lvl: 1 }).lvl >= 2 && chance(0.6)) { gainNeed('心情', 6); addLog(`你做了顿饭，全家都吃得很香。「咱家孩子手艺真好。」`); }
       else addLog(pick(['你照着印象做了顿饭，能吃，甚至有点香。', '你掂了掂锅铲，炒出一盘像样的菜。', '厨房叮叮当当一阵，你端出了一桌子热气。']));
+      // 厨艺打包：饭菜也是道具（3 级+ 打包出「妈妈的味道」）
+      const dish = (S.skills.烹饪 || { lvl: 1 }).lvl >= 3 ? 'moms' : 'bento';
+      if (addItem(dish)) addLog(`你顺手打包了一份「${ITEMS[dish].name}」，揣进口袋。`, 'sys');
     } },
   { id: 'daydream', loc: 'home', label: '发会儿呆', cond: () => true, run: idleRun(IDLE_HOME, IDLE_HOME_FINDS) },
   { id: 'chat', loc: 'home', label: '和家人聊天', cond: () => true, run: () => {
@@ -1704,6 +1743,7 @@ const ACTIONS = [
       }
     } },
   /* ---- 广场 ---- */
+  { id: 'store', loc: 'square', label: '小卖部', cond: () => true, run: openShop },
   { id: 'book', loc: 'square', label: '书店买书', cost: 8, cond: () => S.money >= 8, run: () => {
       gainMoney(-8); gain('智力', 1.2);
       addBuff('灵感迸发', '新书在手，学什么都事半功倍。', 6, { gainMul: 1.5 });
@@ -1784,6 +1824,7 @@ const ACT_HINTS = {
   recital: { 心情: 12 },
   toy: { 娱乐: 32, 心情: 8 },
   snack: { 饱食: 26, 心情: 4 },
+  store: {},
   artist: { 娱乐: 14, 心情: 4 },
   chess: { 娱乐: 6 },
   deli: { 饱食: 44, 心情: 3 },
@@ -1839,6 +1880,27 @@ function render() {
   $('ui-buffs').innerHTML = S.buffs.length
     ? S.buffs.map((b) => `<span class="tag bad" title="${b.desc}">${b.name}</span>`).join('')
     : '<span class="dim">平常</span>';
+  // 口袋（6 格，同类叠 3，点击即用，长按看来历）
+  const pk = $('pocket');
+  if (pk) {
+    pk.innerHTML = '';
+    const items = S.pocket || [];
+    for (let i = 0; i < POCKET_SLOTS; i++) {
+      const p = items[i];
+      const d = document.createElement('div');
+      if (p && ITEMS[p.id]) {
+        const it = ITEMS[p.id];
+        d.className = 'pocket-slot';
+        d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${it.icon}</svg>${p.n > 1 ? `<i>${p.n}</i>` : ''}`;
+        const useTxt = Object.entries(it.use).map(([k, v]) => `${k}+${v}`).join(' ');
+        d.title = `${it.name}｜${it.lore}\n梦外：${useTxt} ｜ 梦里：${it.dream}`;
+        d.onclick = () => useItem(p.id);
+      } else {
+        d.className = 'pocket-slot empty';
+      }
+      pk.appendChild(d);
+    }
+  }
   // 需求 + 低位预警
   ['饱食', '精力', '清洁', '娱乐', '心情', '健康'].forEach((k) => {
     setBar('need-' + k, S.needs[k]);
@@ -2106,6 +2168,7 @@ function resumeLife() {
   const d = loadSave();
   if (!d) return false;
   S = d.state;
+  S.pocket = Array.isArray(S.pocket) ? S.pocket : []; // 旧存档兼容
   eventLock = false;
   currentEventId = null;
   milestoneQueue = (d.queue || []).map(findEventById).filter(Boolean);
@@ -2263,6 +2326,11 @@ window.addEventListener('keydown', (e) => {
   // 地图弹窗：Esc 关闭，屏蔽场景快捷键
   if ($('modal-map') && !$('modal-map').classList.contains('hidden')) {
     if (e.key === 'Escape') closeMap();
+    return;
+  }
+  // 小卖部弹窗：Esc 关闭
+  if ($('modal-shop') && !$('modal-shop').classList.contains('hidden')) {
+    if (e.key === 'Escape') $('modal-shop').classList.add('hidden');
     return;
   }
   // 事件弹窗：数字键选选项，回车/空格继续
@@ -2446,6 +2514,46 @@ function closeMap() {
   if (m) m.classList.add('hidden');
 }
 
+/* ---------------- 小卖部：逛店不耗时，成交才过一个时段 ---------------- */
+const SHOP_STOCK = ['tanghulu', 'soda', 'noodle'];
+function openShop() {
+  const m = $('modal-shop');
+  if (!m) return true;
+  renderShop();
+  m.classList.remove('hidden');
+  Sound.play('page');
+  return true;
+}
+function renderShop() {
+  const box = $('shop-items');
+  if (!box) return;
+  $('shop-money').textContent = '零花钱 ¥' + S.money;
+  box.innerHTML = '';
+  SHOP_STOCK.forEach((id) => {
+    const it = ITEMS[id];
+    const b = document.createElement('button');
+    b.className = 'choice-btn shop-item';
+    b.disabled = S.money < it.price;
+    const useTxt = Object.entries(it.use).map(([k, v]) => `${k}+${v}`).join(' ');
+    b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${it.icon}</svg>` +
+      `<span class="shop-name">${it.name}<i>¥${it.price}</i></span><em>${it.lore}</em>`;
+    b.title = `梦外：${useTxt} ｜ 梦里：${it.dream}`;
+    b.onclick = () => {
+      if (S.money < it.price) return;
+      gainMoney(-it.price);
+      if (!addItem(id)) {
+        gainMoney(it.price);
+        addLog('口袋装得满满的，塞不下了。小卖部阿姨笑你：「下次再来嘛。」', 'sys');
+      } else {
+        addLog(`你买下了一${id === 'soda' ? '瓶' : id === 'tanghulu' ? '串' : '包'}「${it.name}」，揣进口袋。`);
+      }
+      $('modal-shop').classList.add('hidden');
+      if (S.alive) advanceSlot();
+    };
+    box.appendChild(b);
+  });
+}
+
 /* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */
 function initTipPop() {
   const pop = $('tip-pop');
@@ -2554,6 +2662,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btn-memorial').onclick = () => { renderMemorials(); $('modal-memorial').classList.remove('hidden'); };
   $('btn-memorial-close').onclick = () => $('modal-memorial').classList.add('hidden');
   $('btn-map-close').onclick = closeMap;
+  $('btn-shop-close').onclick = () => $('modal-shop').classList.add('hidden');
   // 戳一戳小人（简笔 svg 与立绘层都挂：立绘模式下 svg 隐藏点不到）
   const poke = () => {
     if (!S || !S.alive || eventLock) return;

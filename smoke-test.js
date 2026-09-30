@@ -5,7 +5,7 @@ function el() {
   return {
     style: {}, innerHTML: '', textContent: '', className: '', title: '', disabled: false,
     children: [],
-    classList: { add() {}, remove() {}, contains() { return false; } },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
     appendChild(c) { this.children.push(c); },
     setAttribute() {}, removeAttribute() {},
     set innerHTML(v) { if (v === '') this.children = []; this._html = v; },

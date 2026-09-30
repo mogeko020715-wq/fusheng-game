@@ -1942,26 +1942,45 @@ function render() {
   // 情绪气泡
   if (S.needs.心情 < 25) actor.classList.add('moodlow'); else actor.classList.remove('moodlow');
   if (S.buffs.some((b) => b.name === '感冒')) actor.classList.add('sick'); else actor.classList.remove('sick');
-  // 地点导航：简笔图标条 + 末尾地图入口
-  const nav = $('locations');
-  nav.innerHTML = '';
-  Object.entries(SCENES).forEach(([id, sc]) => {
-    const locked = S.age < sc.min;
-    const btn = document.createElement('button');
-    btn.className = 'loc-btn loc-icon' + (S.location === id ? ' active' : '');
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${LOC_ICONS[id]}</svg>`;
-    btn.disabled = locked;
-    btn.title = locked ? `${mapTitle(id)} · ${sc.min} 岁解锁` : `${mapTitle(id)} · ← → 方向键切换地点`;
-    btn.onclick = () => switchLocation(id);
-    nav.appendChild(btn);
+  // 地点导航：场景卡头部小字行（当前地点 + 地图入口 + 沿街左右切换；场景本身支持滑动手势）
+  const locOrder = Object.keys(SCENES);
+  const curIdx = locOrder.indexOf(S.location);
+  const fresh = freshScenes();
+  const locCur = $('loc-cur');
+  if (locCur) {
+    locCur.textContent = mapTitle(S.location);
+    locCur.onclick = () => openMap();
+  }
+  const locMap = $('loc-map');
+  if (locMap) {
+    locMap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${MAP_ICON}</svg>` +
+      (fresh.size ? '<i class="map-dot"></i>' : '');
+    locMap.onclick = () => openMap();
+  }
+  const canCycle = locOrder.filter((k) => S.age >= SCENES[k].min).length > 1;
+  [['loc-prev', -1], ['loc-next', 1]].forEach(([id, dir]) => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.toggle('dim', !canCycle);
+    // 方向新鲜事点：该方向上还有没见过的事件地点
+    el.classList.toggle('has-fresh', [...fresh].some((f) => {
+      const i = locOrder.indexOf(f);
+      return dir < 0 ? i < curIdx : i > curIdx;
+    }));
+    el.title = dir < 0 ? '沿街往左（← 方向键）' : '沿街往右（→ 方向键）';
+    el.onclick = () => { if (canCycle) cycleLoc(dir); };
   });
-  const mapBtn = document.createElement('button');
-  mapBtn.className = 'loc-btn loc-icon map-open';
-  mapBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${MAP_ICON}</svg>` +
-    (freshScenes().size ? '<i class="map-dot"></i>' : '');
-  mapBtn.title = '众生市地图';
-  mapBtn.onclick = () => openMap();
-  nav.appendChild(mapBtn);
+  const stageNav = $('scene-stage');
+  if (stageNav && stageNav.addEventListener && !stageNav._swipeBound) { // 移动端直觉手势：场景上左右滑 = 沿街走
+    stageNav._swipeBound = true;
+    let swipeX = 0;
+    stageNav.addEventListener('touchstart', (e) => { swipeX = e.touches[0].clientX; }, { passive: true });
+    stageNav.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - swipeX;
+      if (Math.abs(dx) < 42) return; // 轻扫不算，避免误触场景热点
+      cycleLoc(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
   // 场景（三层：远 / 中 / 近，随鼠标视差）
   const art = ART[S.location];
   const midArt = typeof art.mid === 'function' ? art.mid() : art.mid;
@@ -1971,18 +1990,23 @@ function render() {
     `<div class="lyr lyr-near">${art.near}</div>`;
   $('scene-title').textContent = S.location === 'school' ? schoolTitle() : SCENES[S.location].title;
   $('scene-desc').textContent = SCENES[S.location].desc();
-  // 动作
+  // 动作：正当其时主按钮 + 常做 2×2 + 随性 chip 排——一个都不藏，只分层
   const box = $('actions');
   box.innerHTML = '';
-  let n = 0;
-  ACTIONS.filter((a) => a.loc === S.location).forEach((a) => {
-    if (a.cond && !a.cond()) return;
-    n++;
+  const visibleActs = ACTIONS.filter((a) => a.loc === S.location && (!a.cond || a.cond()));
+  const findAct = (id) => visibleActs.find((a) => a.id === id);
+  let primaryAct = null;
+  if (S.slot === 5) primaryAct = findAct('dream') || findAct('sleep'); // 夜晚：没做梦先递「做个梦」
+  else if (MEAL_SLOTS.includes(S.slot)) primaryAct = findAct('meal');  // 三餐饭点（含清晨早饭）
+  if (!primaryAct) primaryAct = findAct('play') || visibleActs[0];
+  let actN = 0;
+  const makeActBtn = (a) => {
+    actN++;
     const btn = document.createElement('button');
     btn.className = 'act-btn';
     const label = typeof a.label === 'function' ? a.label() : a.label;
     btn.innerHTML = (a.cost ? `${label} <span class="cost ${S.money < a.cost ? 'no' : ''}">¥${a.cost}</span>` : label) +
-      (n <= 9 ? `<span class="kbd">${n}</span>` : '');
+      (actN <= 9 ? `<span class="kbd">${actN}</span>` : '');
     btn.onclick = () => {
       if (btn._lp) { btn._lp = false; return; }   // 长按预览后不触发行动
       Sound.play('pop');
@@ -2011,8 +2035,29 @@ function render() {
       });
       btn.addEventListener('touchcancel', () => { clearTimeout(lpTimer); clearHints(); });
     }
-    box.appendChild(btn);
-  });
+    return btn;
+  };
+  if (primaryAct) {
+    const cap = document.createElement('div');
+    cap.className = 'act-caption';
+    cap.textContent = '— ' + (
+      S.slot === 5 ? (findAct('dream') ? '正当其时 · 今夜未做梦' : '正当其时 · 夜晚')
+      : MEAL_SLOTS.includes(S.slot) ? '正当其时 · 饭点'
+      : '正当其时') + ' —';
+    box.appendChild(cap);
+    const pb = makeActBtn(primaryAct);
+    pb.classList.add('act-primary');
+    box.appendChild(pb);
+  }
+  const restActs = visibleActs.filter((a) => a !== primaryAct);
+  const grid = document.createElement('div');
+  grid.className = 'act-grid';
+  restActs.slice(0, 4).forEach((a) => grid.appendChild(makeActBtn(a)));
+  if (grid.children.length) box.appendChild(grid);
+  const chips = document.createElement('div');
+  chips.className = 'act-chips';
+  restActs.slice(4).forEach((a) => chips.appendChild(makeActBtn(a)));
+  if (chips.children.length) box.appendChild(chips);
   // 日志
   $('log').innerHTML = S.log.map((l) =>
     `<p class="${l.cls || ''}">【${l.age}岁·${l.day}日】${l.text}</p>`).join('');
@@ -2361,7 +2406,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (eventLock || !S.alive) return;
   if (/^[1-9]$/.test(e.key)) {
-    const btn = $('actions').children[+e.key - 1];
+    const btn = $('actions').querySelectorAll('.act-btn')[+e.key - 1];
     if (btn && typeof btn.click === 'function') btn.click();
   } else if (e.key === 'ArrowLeft') { e.preventDefault(); cycleLoc(-1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); cycleLoc(1); }

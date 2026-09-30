@@ -5,7 +5,7 @@ function el() {
   const e = {
     style: {}, textContent: '', className: '', title: '', disabled: false,
     children: [],
-    classList: { add() {}, remove() {}, contains() { return false; } },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
     appendChild(c) { this.children.push(c); },
     setAttribute() {}, removeAttribute() {},
     set onclick(f) { this._c = f; }, get onclick() { return this._c; },

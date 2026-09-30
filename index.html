@@ -132,14 +132,17 @@
       <div id="ui-skills" class="tag-list"><span class="dim">尚无</span></div>
       <h3>状态</h3>
       <div id="ui-buffs" class="tag-list"><span class="dim">平常</span></div>
-      <h3>口袋</h3>
-      <div id="pocket"></div>
       </div>
     </aside>
 
     <!-- 中栏：场景 -->
     <section id="panel-center" class="sketch-box">
-      <nav id="locations"></nav>
+      <div id="loc-line">
+        <button id="loc-prev" class="loc-arrow" aria-label="沿街往左">‹</button>
+        <span id="loc-cur" class="loc-cur" title="打开众生市地图"></span>
+        <button id="loc-map" class="loc-map" title="众生市地图" aria-label="众生市地图"></button>
+        <button id="loc-next" class="loc-arrow" aria-label="沿街往右">›</button>
+      </div>
       <div id="scene-stage" class="slot-0">
         <div id="sky">
           <div class="stars">
@@ -240,6 +243,8 @@
         <div class="need-row" title="娱乐 —— 玩耍恢复；低于 20 时看书效率减半"><span>娱乐</span><div class="bar"><div id="need-娱乐" class="bar-fill"></div></div></div>
         <div class="need-row" title="心情 —— 受其他需求影响，也影响考试发挥"><span>心情</span><div class="bar"><div id="need-心情" class="bar-fill"></div></div></div>
         <div class="need-row" title="健康 —— 归零则旅程提前结束，请保重"><span class="accent">健康</span><div class="bar"><div id="need-健康" class="bar-fill health"></div></div></div>
+        <h3 class="pocket-title">口袋</h3>
+        <div id="pocket"></div>
       </div>
       <div class="sketch-box log-box">
         <h3>岁月</h3>

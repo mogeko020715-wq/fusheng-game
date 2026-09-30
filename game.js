@@ -2623,7 +2623,7 @@ const DREAM_FOES = {
     { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。' },
   ],
   m: [ // 7-12 岁
-    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，红色的 59 分大得占满了整张纸。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。' },
+    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，59 分被黑笔重重圈了两圈，大得占满了整张纸。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。' },
     { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 6, intro: '几个高个子影子拦在路中间，笑声闷闷的。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。' },
     { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 5, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。' },
   ],
@@ -2654,7 +2654,7 @@ function dreamInit() {
     def: S.attrs.体质 * 0.05 + wu,
     dodge: 0.05 + S.attrs.魅力 * 0.0015,
     steps: 10 + Math.floor(Math.random() * 5), pos: 0,
-    candy: 0, usedArt: false, cleared: false,
+    candy: 0, usedArts: {}, cleared: false, bless: {},
     foe: null, foeDodge: 0, marbleDodge: 0,
   };
   D.hp = D.maxHp; D.mp = D.maxMp;
@@ -2677,7 +2677,7 @@ function dreamRender() {
   $('dream-path').innerHTML = path + '<b class="dream-door"></b>';
   setBar('dream-hp', D.hp / D.maxHp * 100);
   setBar('dream-mp', D.mp / D.maxMp * 100);
-  $('dream-candy').textContent = '星星糖 ×' + D.candy;
+  $('dream-candy').textContent = '星星糖 ×' + dreamCandy();
   $('dream-pos').textContent = '第 ' + D.pos + ' / ' + D.steps + ' 步';
   const acts = $('dream-acts');
   acts.innerHTML = '';
@@ -2695,24 +2695,43 @@ function dreamRender() {
     $('dream-foe-name').textContent = f.name;
     setBar('dream-foe-bar', f.hp / f.maxHp * 100);
     mk('迎上去', () => dreamTurn('atk'), '拳脚');
-    const artLvl = S.flags.art && (S.skills[S.flags.art] || { lvl: 0 }).lvl >= 2;
-    const mpCost = artLvl ? 6 : 4;
-    const b = mk(artLvl ? DREAM_ART_SKILL[S.flags.art].name : '动动脑筋', () => dreamTurn('skill'), '心力 -' + mpCost);
-    if (D.mp < mpCost) b.disabled = true;
+    mk('用点本事', dreamPickSkill, '心力');
     mk('摸口袋', () => dreamTurn('item'), '道具');
     mk('退避', () => dreamTurn('flee'), '退一格');
   } else {
     $('dream-foe').classList.add('hidden');
+    const cg = $('dream-cg');
+    if (cg) { cg.classList.add('hidden'); cg.removeAttribute('src'); }
     mk('往前走', dreamStep);
+    mk('星星糖罐', dreamCandyShop, '×' + dreamCandy());
     mk('回头', dreamBack, D.pos === 0 ? '醒来' : '缓口气');
   }
 }
 const DREAM_ART_SKILL = {
-  绘画: { name: '纸盾', run: () => { D.foeShield = 2; dreamLog('你画出一面纸盾，挡在身前。'); } },
-  乐器: { name: '安眠曲', run: () => { D.foeCalm = 2; dreamLog('你哼起一段曲子，心结的动作慢了下来。'); } },
-  武术: { name: '连环踢', run: () => { const d = Math.round((D.atk * 0.7) * 2); D.foe.hp -= d; dreamLog(`你连环两脚踢出，心结晃了两晃（-${d}）。`); } },
-  编程: { name: '修一修', run: () => { const h = Math.round(D.maxHp * 0.25); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(`你把坏掉的地方修补了一下（勇气 +${h}）。`); } },
+  绘画: { name: '纸盾', run: (lvl) => { D.foeShield = lvl >= 4 ? 3 : 2; dreamLog(lvl >= 4 ? '你画出一面厚厚的纸盾，边角还描了花，稳稳挡在身前。' : '你画出一面纸盾，挡在身前。'); } },
+  乐器: { name: '安眠曲', run: (lvl) => { D.foeCalm = lvl >= 4 ? 3 : 2; dreamLog(lvl >= 4 ? '你哼起一段长长的曲子，心结听得入了神，动作慢了下来。' : '你哼起一段曲子，心结的动作慢了下来。'); } },
+  武术: { name: '连环踢', run: (lvl) => { const per = Math.round(D.atk * (0.5 + 0.1 * lvl)); D.foe.hp -= per * 2; dreamLog(`你连环两脚踢出，心结晃了两晃（-${per}、-${per}）。`); } },
+  编程: { name: '修一修', run: (lvl) => { const h = Math.round(D.maxHp * (0.15 + 0.05 * lvl)); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(`你把坏掉的地方修补了一下（勇气 +${h}）。`); } },
 };
+function dreamPickSkill() {
+  const acts = $('dream-acts');
+  acts.innerHTML = '';
+  const mk = (label, fn, sub, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'ink-btn dream-btn';
+    b.innerHTML = sub ? `${label}<small>${sub}</small>` : label;
+    b.onclick = fn;
+    if (disabled) b.disabled = true;
+    acts.appendChild(b);
+  };
+  mk('动动脑筋', () => dreamTurn('skill', null), '心力 -4', D.mp < 4);
+  Object.keys(DREAM_ART_SKILL).forEach((art) => {
+    const lvl = (S.skills[art] || { lvl: 0 }).lvl;
+    if (lvl < 2) return; // 2 级解锁
+    mk(DREAM_ART_SKILL[art].name, () => dreamTurn('skill', art), `${art} ${lvl} 级 · 心力 -6`, D.mp < 6);
+  });
+  mk('算了', () => dreamRender());
+}
 function dreamStep() {
   D.pos++;
   Sound.play('scratch');
@@ -2738,6 +2757,60 @@ function dreamBack() {
   dreamLog('你回头走了一小段，心跳慢了下来（勇气 +3）。');
   dreamRender();
 }
+/* 星星糖：程内梦境货币。银行（S.candy）+ 本场掉落（D.candy）合计可用，先花刚捡的 */
+function dreamCandy() { return (S.candy || 0) + (D ? D.candy : 0); }
+function spendCandy(n) {
+  if (dreamCandy() < n) return false;
+  let left = n;
+  const fromD = Math.min(D.candy, left); D.candy -= fromD; left -= fromD;
+  if (left > 0) S.candy -= left;
+  return true;
+}
+const DREAM_BLESSINGS = [
+  { id: 'mood', name: '一夜好梦', cost: 4, once: true, desc: '醒来心情 +10', lore: '把甜味儿压在枕头底下，梦都是软的。' },
+  { id: 'energy', name: '云朵枕头', cost: 4, once: true, desc: '醒来精力 +10', lore: '枕着云朵睡觉，怎么会累呢。' },
+  { id: 'gift', name: '梦的礼物', cost: 8, once: false, desc: '枕边多一件小东西', lore: '梦里捡到的，醒来居然还在。' },
+];
+const DREAM_GIFT_POOL = ['tanghulu', 'soda', 'noodle', 'marble'];
+function dreamCandyShop() {
+  const acts = $('dream-acts');
+  acts.innerHTML = '';
+  DREAM_BLESSINGS.forEach((b) => {
+    const btn = document.createElement('button');
+    btn.className = 'ink-btn dream-btn';
+    btn.innerHTML = `${b.name}<small>${b.cost} 颗糖 · ${b.desc}</small>`;
+    btn.disabled = (b.once && D.bless[b.id]) || dreamCandy() < b.cost;
+    btn.onclick = () => {
+      if (b.once && D.bless[b.id]) return;
+      if (!spendCandy(b.cost)) return;
+      Sound.play('chime');
+      if (b.id === 'gift') {
+        const id = pick(DREAM_GIFT_POOL);
+        if (!addItem(id)) {
+          D.candy += b.cost; // 口袋满了，糖退回本场（总量守恒）
+          dreamLog('你想要一件礼物，可口袋已经满满的。星星糖又回到了糖罐里。');
+        } else {
+          dreamLog(`你兑了一份「梦的礼物」。醒来时枕边多了「${ITEMS[id].name}」。`);
+        }
+      } else {
+        D.bless[b.id] = true;
+        dreamLog(`你兑了「${b.name}」。${b.lore}`);
+      }
+      dreamCandyShop();
+    };
+    acts.appendChild(btn);
+  });
+  const soon = document.createElement('button');
+  soon.className = 'ink-btn dream-btn';
+  soon.disabled = true;
+  soon.innerHTML = '小小衣柜<small>还在梦里缝着，就快做好了</small>';
+  acts.appendChild(soon);
+  const back = document.createElement('button');
+  back.className = 'ink-btn dream-btn';
+  back.textContent = '算了';
+  back.onclick = () => dreamRender();
+  acts.appendChild(back);
+}
 function dreamEncounter(boss) {
   const f = boss || pick(DREAM_FOES[dreamBand()]);
   D.foe = Object.assign({}, f, { maxHp: f.hp, isBoss: !!boss });
@@ -2748,7 +2821,7 @@ function dreamEncounter(boss) {
   dreamLog(f.intro);
   dreamRender();
 }
-function dreamTurn(kind) {
+function dreamTurn(kind, art) {
   const f = D.foe;
   if (!f) return;
   if (kind === 'atk') {
@@ -2756,16 +2829,18 @@ function dreamTurn(kind) {
     f.hp -= d;
     dreamLog(pick([`你迎上去，稳稳地站住了（-${d}）。`, `你往前一步，心结就退了一步（-${d}）。`]));
   } else if (kind === 'skill') {
-    const artLvl = S.flags.art && (S.skills[S.flags.art] || { lvl: 0 }).lvl >= 2;
-    if (artLvl) {
-      D.mp -= 6; D.usedArt = true;
-      DREAM_ART_SKILL[S.flags.art].run();
-    } else {
+    const lvl = art ? (S.skills[art] || { lvl: 0 }).lvl : 0;
+    if (art && lvl >= 2) {
+      if (D.mp < 6) return dreamRender(); // 心力不够，不耗回合
+      D.mp -= 6; D.usedArts[art] = true;
+      DREAM_ART_SKILL[art].run(lvl);
+    } else if (!art) {
+      if (D.mp < 4) return dreamRender();
       D.mp -= 4;
       const d = Math.round(S.attrs.智力 * 0.15 + rand(0, 3));
       f.hp -= d;
       dreamLog(`你开动脑筋想了想，心结的破绽露了出来（-${d}）。`);
-    }
+    } else { return dreamRender(); }
   } else if (kind === 'item') {
     return dreamPickItem();
   } else if (kind === 'flee') {
@@ -2853,6 +2928,8 @@ function dreamWake(how) {
   S.candy = (S.candy || 0) + candy;
   S.flags.dreamtToday = true;
   $('modal-dream').classList.add('hidden');
+  const dcg = $('dream-cg');
+  if (dcg) { dcg.classList.add('hidden'); dcg.removeAttribute('src'); }
   if (how === 'good') {
     gainNeed('心情', 8);
     remember('你走到了梦的尽头，推开了那扇门。醒来的时候，枕头边好像还有星星的味道。');
@@ -2864,9 +2941,13 @@ function dreamWake(how) {
   } else {
     addLog(`你没往深处走，翻了个身醒了过来。（星星糖 +${candy}）`);
   }
-  // 梦中练习反哺：梦里用过技艺，醒来手感顺了
-  if (D.usedArt && S.flags.art) {
-    gainSkill(S.flags.art, D.cleared ? 2 : 1);
+  // 星星糖换的小祝福，在醒来的这一刻兑现
+  if (D.bless.mood) { gainNeed('心情', 10); addLog('枕头底下像压着甜甜的味道，醒来心情格外好。', 'sys'); }
+  if (D.bless.energy) { gainNeed('精力', 10); addLog('像枕着云朵睡了一觉，醒来神清气爽。', 'sys'); }
+  // 梦中练习反哺：梦里用过的技艺，醒来手感都顺了（每门每晚结算一次）
+  const used = Object.keys(D.usedArts || {});
+  if (used.length) {
+    used.forEach((a) => gainSkill(a, D.cleared ? 2 : 1));
     addLog('梦里也在练，醒来手感顺了一点。', 'sys');
   }
   D = null;

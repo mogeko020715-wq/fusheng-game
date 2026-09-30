@@ -2207,6 +2207,11 @@ function endLife(cause) {
   $('modal-event').classList.add('hidden');
   $('screen-end').classList.remove('hidden');
   $('end-title').textContent = cause === 'early' ? '提 前 谢 幕' : '落 幕 · 成 年';
+  const endCg = $('end-cg'); // 结局页头横幅：提前谢幕用空镜，成年复用 m18 天台背影
+  if (endCg) {
+    endCg.src = 'assets/cg/' + (cause === 'early' ? 'cg-ending-early' : 'cg-m18') + '.png';
+    endCg.classList.remove('hidden');
+  }
   $('end-verdict').textContent = verdict;
   $('end-stats').innerHTML = ['体质', '智力', '魅力']
     .map((k) => `<span class="tag">${k} ${Math.round(S.attrs[k])}</span>`).join('') +

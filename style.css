@@ -252,8 +252,8 @@ h3 {
 #dream-log p { border-bottom: 1px dotted var(--paper-dark); padding: 2px 0; margin: 0; }
 #dream-log p:first-child { color: var(--ink); }
 #dream-log p:not(:first-child) { color: var(--gray); }
-#dream-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.dream-btn { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.3; }
+#dream-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dream-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; width: 100%; padding-left: 10px; padding-right: 10px; }
 .dream-btn small { font-size: 11px; color: var(--gray); font-weight: normal; }
 /* 众生市地图弹层 */
 .map-box { max-width: 560px; position: relative; }

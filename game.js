@@ -2714,6 +2714,7 @@ const DREAM_ART_SKILL = {
   编程: { name: '修一修', run: (lvl) => { const h = Math.round(D.maxHp * (0.15 + 0.05 * lvl)); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(`你把坏掉的地方修补了一下（勇气 +${h}）。`); } },
 };
 function dreamPickSkill() {
+  if (!D) return;
   const acts = $('dream-acts');
   acts.innerHTML = '';
   const mk = (label, fn, sub, disabled) => {
@@ -2773,6 +2774,7 @@ const DREAM_BLESSINGS = [
 ];
 const DREAM_GIFT_POOL = ['tanghulu', 'soda', 'noodle', 'marble'];
 function dreamCandyShop() {
+  if (!D) return;
   const acts = $('dream-acts');
   acts.innerHTML = '';
   DREAM_BLESSINGS.forEach((b) => {

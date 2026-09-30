@@ -5,7 +5,7 @@ function el() {
   return {
     style: {}, innerHTML: '', textContent: '', className: '', title: '', disabled: false,
     children: [],
-    classList: { add() {}, remove() {}, contains() { return false; } },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
     appendChild(c) { c._parent = this; this.children.push(c); },
     prepend(c) { c._parent = this; this.children.unshift(c); },
     get lastChild() { return this.children[this.children.length - 1]; },

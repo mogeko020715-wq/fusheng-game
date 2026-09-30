@@ -878,6 +878,7 @@ function advanceSlot() {
 function nextDay() {
   S.day++;
   S.flags.wentSchool = false;
+  S.flags.dreamtToday = false;
   S.dayHurt = {};
   // 生日：每 DAYS_PER_YEAR 天
   if ((S.day - 1) % DAYS_PER_YEAR === 0) {
@@ -932,11 +933,11 @@ function eatMeal() {
   }
 }
 
-function sleep() {
+function sleep(customLog) {
   S.slot = 5; // 直接入夜
   gainNeed('精力', 100);
   gainNeed('清洁', -6);
-  addLog(pick(['你睡着了，做了一个短短的梦。', '你沾到枕头就睡着了。', '你抱着被子滚了两圈，沉沉睡去。']));
+  addLog(customLog || pick(['你睡着了，做了一个短短的梦。', '你沾到枕头就睡着了。', '你抱着被子滚了两圈，沉沉睡去。']));
   nextDay();
   S.slot = 0;
   if (S.alive) afterAction();
@@ -1575,6 +1576,7 @@ const ACTIONS = [
   /* ---- 家 ---- */
   { id: 'meal', loc: 'home', label: '吃饭', cond: () => MEAL_SLOTS.includes(S.slot), run: eatMeal },
   { id: 'sleep', loc: 'home', label: '睡觉', cond: () => true, run: sleep },
+  { id: 'dream', loc: 'home', label: '做个梦', cond: () => S.slot === 5 && !S.flags.dreamtToday, run: enterDream },
   { id: 'wash', loc: 'home', label: '洗漱', cond: () => true, run: () => { gainNeed('清洁', 42); gainNeed('心情', 2); addLog(pick(['你把自己洗得干干净净。', '水龙头哗哗响，你对着镜子做了个鬼脸。', '洗完浑身清爽，像换了一层皮。'])); } },
   { id: 'play', loc: 'home', label: '玩耍', cond: () => true, run: () => {
       const bonus = S.familyKey === 'rich' ? 6 : 0;
@@ -1798,6 +1800,7 @@ const ACTIONS = [
 const ACT_HINTS = {
   meal: () => ({ 饱食: S.family.meal, 心情: 4 }),
   sleep: { 精力: 100, 清洁: -6 },
+  dream: { 精力: 100, 清洁: -6 },
   wash: { 清洁: 42, 心情: 2 },
   play: { 娱乐: 26, 心情: 7 },
   study: { 娱乐: -6, 精力: -3 },
@@ -2338,6 +2341,11 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') $('modal-shop').classList.add('hidden');
     return;
   }
+  // 梦境弹窗：Esc 仅在无遭遇时主动醒来
+  if ($('modal-dream') && !$('modal-dream').classList.contains('hidden')) {
+    if (e.key === 'Escape' && D && !D.foe) dreamWake('voluntary');
+    return;
+  }
   // 事件弹窗：数字键选选项，回车/空格继续
   if (!$('modal-event').classList.contains('hidden')) {
     if (/^[1-9]$/.test(e.key)) {
@@ -2557,6 +2565,281 @@ function renderShop() {
     };
     box.appendChild(b);
   });
+}
+
+/* ---------------- 梦境小径：只有「往前走」和「回头」的梦 ----------------
+ * 回梦之旅式两按钮肉鸽；文本一律非对抗——心结不是敌人，是要被克服的东西
+ * 护栏：惊醒只扣 心情-5/健康-2；随时可醒来；战斗属性全部由养成数值换算 */
+const DREAM_FOES = {
+  s: [ // 3-6 岁
+    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里变得好大好大，白大褂的衣角扫过地板。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。' },
+    { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 4, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。' },
+    { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 4, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。' },
+    { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。' },
+  ],
+  m: [ // 7-12 岁
+    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，红色的 59 分大得占满了整张纸。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。' },
+    { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 6, intro: '几个高个子影子拦在路中间，笑声闷闷的。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。' },
+    { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 5, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。' },
+  ],
+  l: [ // 13-17 岁
+    { id: 'rank', cg: 'cg-dream-rank', name: '红榜的影子', hp: 34, atk: 7, intro: '一张望不到头的榜单，你的名字在很后面很后面。', win: '你把目光从别人的名字上收回来。你的路，不在那张纸上。' },
+    { id: 'farewell', cg: 'cg-dream-farewell', name: '毕业的钟声', hp: 32, atk: 7, intro: '钟声一响，教室里的身影一个个变淡，你怎么喊都没有人回头。', win: '你不再喊了。你记住他们的样子，然后朝前走。' },
+  ],
+};
+const DREAM_BOSSES = {
+  s: { id: 'firstnight', cg: 'cg-dream-firstnight', name: '分床睡的第一夜', hp: 30, atk: 5, intro: '门后是一间只属于你的小房间，床有点大，夜有点长。', win: '你躺下来，把被子拉到下巴。原来一个人睡，也没那么难。' },
+  m: { id: 'finalexam', cg: 'cg-dream-finalexam', name: '期末考', hp: 46, atk: 8, intro: '门后是一间安静的考场，卷子雪白雪白，等着落笔。', win: '你一道一道写下来。交卷铃响的时候，你的手心是干的。' },
+  l: { id: 'future-self', cg: 'cg-dream-future-self', name: '未来的自己', hp: 58, atk: 9, intro: '门后站着一个大人，眉眼和你很像，正静静地看着你。', win: '那个大人朝你笑了笑，说：「慢慢来，我等你。」' },
+};
+const DREAM_FLUKES = [ // 奇遇：25% 概率
+  { txt: '一朵糖果云飘过来，你抓了两把星星糖。', run: () => { D.candy += 2; } },
+  { txt: '一颗流星落进你手心，心力顺着指尖涨上来。', run: () => { D.mp = Math.min(D.maxMp, D.mp + 6); } },
+  { txt: '一张长椅开在云上，你坐下来歇了歇。', run: () => { D.hp = Math.min(D.maxHp, D.hp + 10); } },
+  { txt: '一个记忆泡泡飘过来，里面是白天的事。', run: () => { gainNeed('心情', 3); } },
+];
+let D = null; // 梦境临时状态，不入存档
+function dreamBand() { return S.age <= 6 ? 's' : S.age <= 12 ? 'm' : 'l'; }
+function dreamInit() {
+  const wu = (S.skills.武术 || { lvl: 0 }).lvl;
+  D = {
+    maxHp: Math.round(40 + S.attrs.体质 * 0.6 + S.needs.健康 * 0.2),
+    maxMp: Math.round(20 + S.attrs.智力 * 0.4),
+    atk: 5 + S.attrs.体质 * 0.08 + wu * 1.5,
+    def: S.attrs.体质 * 0.05 + wu,
+    dodge: 0.05 + S.attrs.魅力 * 0.0015,
+    steps: 10 + Math.floor(Math.random() * 5), pos: 0,
+    candy: 0, usedArt: false, cleared: false,
+    foe: null, foeDodge: 0, marbleDodge: 0,
+  };
+  D.hp = D.maxHp; D.mp = D.maxMp;
+}
+function dreamLog(t) {
+  const el = $('dream-log');
+  if (!el) return;
+  const p = document.createElement('p');
+  p.textContent = t;
+  el.prepend(p);
+  while (el.children.length > 8) el.lastChild.remove();
+}
+function dreamRender() {
+  if (!D) return;
+  // 进度路：一格一点，尽头一扇门
+  let path = '';
+  for (let i = 0; i <= D.steps; i++) {
+    path += `<i class="${i < D.pos ? 'done' : i === D.pos ? 'now' : ''}"></i>`;
+  }
+  $('dream-path').innerHTML = path + '<b class="dream-door"></b>';
+  setBar('dream-hp', D.hp / D.maxHp * 100);
+  setBar('dream-mp', D.mp / D.maxMp * 100);
+  $('dream-candy').textContent = '星星糖 ×' + D.candy;
+  $('dream-pos').textContent = '第 ' + D.pos + ' / ' + D.steps + ' 步';
+  const acts = $('dream-acts');
+  acts.innerHTML = '';
+  const mk = (label, fn, sub) => {
+    const b = document.createElement('button');
+    b.className = 'ink-btn dream-btn';
+    b.innerHTML = sub ? `${label}<small>${sub}</small>` : label;
+    b.onclick = fn;
+    acts.appendChild(b);
+    return b;
+  };
+  if (D.foe) {
+    const f = D.foe;
+    $('dream-foe').classList.remove('hidden');
+    $('dream-foe-name').textContent = f.name;
+    setBar('dream-foe-bar', f.hp / f.maxHp * 100);
+    mk('迎上去', () => dreamTurn('atk'), '拳脚');
+    const artLvl = S.flags.art && (S.skills[S.flags.art] || { lvl: 0 }).lvl >= 2;
+    const mpCost = artLvl ? 6 : 4;
+    const b = mk(artLvl ? DREAM_ART_SKILL[S.flags.art].name : '动动脑筋', () => dreamTurn('skill'), '心力 -' + mpCost);
+    if (D.mp < mpCost) b.disabled = true;
+    mk('摸口袋', () => dreamTurn('item'), '道具');
+    mk('退避', () => dreamTurn('flee'), '退一格');
+  } else {
+    $('dream-foe').classList.add('hidden');
+    mk('往前走', dreamStep);
+    mk('回头', dreamBack, D.pos === 0 ? '醒来' : '缓口气');
+  }
+}
+const DREAM_ART_SKILL = {
+  绘画: { name: '纸盾', run: () => { D.foeShield = 2; dreamLog('你画出一面纸盾，挡在身前。'); } },
+  乐器: { name: '安眠曲', run: () => { D.foeCalm = 2; dreamLog('你哼起一段曲子，心结的动作慢了下来。'); } },
+  武术: { name: '连环踢', run: () => { const d = Math.round((D.atk * 0.7) * 2); D.foe.hp -= d; dreamLog(`你连环两脚踢出，心结晃了两晃（-${d}）。`); } },
+  编程: { name: '修一修', run: () => { const h = Math.round(D.maxHp * 0.25); D.hp = Math.min(D.maxHp, D.hp + h); dreamLog(`你把坏掉的地方修补了一下（勇气 +${h}）。`); } },
+};
+function dreamStep() {
+  D.pos++;
+  Sound.play('scratch');
+  if (D.pos >= D.steps) { dreamDoor(); return; }
+  const roll = Math.random();
+  if (roll < 0.6) dreamEncounter();
+  else if (roll < 0.85) {
+    const f = pick(DREAM_FLUKES);
+    f.run();
+    dreamLog(f.txt);
+    dreamRender();
+  } else {
+    D.hp = Math.min(D.maxHp, D.hp + 4);
+    dreamLog(pick(['云朵软软地托着你，你缓了口气（勇气 +4）。', '梦里的风很轻，你走得一点也不累。']));
+    dreamRender();
+  }
+}
+function dreamBack() {
+  Sound.play('scratch');
+  if (D.pos === 0) { dreamWake('voluntary'); return; }
+  D.pos--;
+  D.hp = Math.min(D.maxHp, D.hp + 3);
+  dreamLog('你回头走了一小段，心跳慢了下来（勇气 +3）。');
+  dreamRender();
+}
+function dreamEncounter(boss) {
+  const f = boss || pick(DREAM_FOES[dreamBand()]);
+  D.foe = Object.assign({}, f, { maxHp: f.hp, isBoss: !!boss });
+  D.foeShield = 0; D.foeCalm = 0;
+  const cg = $('dream-cg');
+  if (f.cg) { cg.src = 'assets/cg/' + f.cg + '.png'; cg.classList.remove('hidden'); }
+  else { cg.classList.add('hidden'); cg.removeAttribute('src'); }
+  dreamLog(f.intro);
+  dreamRender();
+}
+function dreamTurn(kind) {
+  const f = D.foe;
+  if (!f) return;
+  if (kind === 'atk') {
+    const d = Math.round(D.atk + rand(0, 4));
+    f.hp -= d;
+    dreamLog(pick([`你迎上去，稳稳地站住了（-${d}）。`, `你往前一步，心结就退了一步（-${d}）。`]));
+  } else if (kind === 'skill') {
+    const artLvl = S.flags.art && (S.skills[S.flags.art] || { lvl: 0 }).lvl >= 2;
+    if (artLvl) {
+      D.mp -= 6; D.usedArt = true;
+      DREAM_ART_SKILL[S.flags.art].run();
+    } else {
+      D.mp -= 4;
+      const d = Math.round(S.attrs.智力 * 0.15 + rand(0, 3));
+      f.hp -= d;
+      dreamLog(`你开动脑筋想了想，心结的破绽露了出来（-${d}）。`);
+    }
+  } else if (kind === 'item') {
+    return dreamPickItem();
+  } else if (kind === 'flee') {
+    if (chance(0.7)) {
+      dreamLog('你悄悄退开了。心结没有追上来。');
+      D.foe = null; D.marbleDodge = 0; D.pos = Math.max(0, D.pos - 1);
+      dreamRender();
+      return;
+    }
+    dreamLog('你想退开，心结却缠了上来——');
+  }
+  // 心结化开判定
+  if (f.hp <= 0) {
+    const gain_candy = f.isBoss ? 8 : 1 + (chance(0.4) ? 1 : 0);
+    D.candy += gain_candy;
+    dreamLog(f.win + `（星星糖 +${gain_candy}）`);
+    D.foe = null; D.marbleDodge = 0;
+    Sound.play('chime');
+    if (f.isBoss) { D.cleared = true; dreamWake('good'); return; }
+    dreamRender();
+    return;
+  }
+  // 心结逼近
+  let atk = f.atk;
+  if (D.foeCalm > 0) { atk = Math.max(1, Math.round(atk * 0.5)); D.foeCalm--; }
+  let hurt = Math.max(1, Math.round(atk - D.def + rand(0, 2)));
+  if (D.foeShield > 0) { hurt = Math.max(0, hurt - 6); D.foeShield--; }
+  if (Math.random() < D.dodge + (D.marbleDodge || 0)) {
+    dreamLog('你身子一侧，心结扑了个空。');
+  } else if (hurt > 0) {
+    D.hp -= hurt;
+    dreamLog(pick([`心结扑面袭来，你有点招架不住（勇气 -${hurt}）。`, `一阵发怵从脚底漫上来（勇气 -${hurt}）。`]));
+  } else {
+    dreamLog('纸盾稳稳接住了这一下。');
+  }
+  if (D.hp <= 0) { dreamWake('scared'); return; }
+  dreamRender();
+}
+function dreamPickItem() {
+  const acts = $('dream-acts');
+  acts.innerHTML = '';
+  const items = (S.pocket || []).filter((p) => p.n > 0);
+  if (!items.length) {
+    dreamLog('口袋空空的。');
+    dreamRender();
+    return;
+  }
+  items.forEach((p) => {
+    const it = ITEMS[p.id];
+    const b = document.createElement('button');
+    b.className = 'ink-btn dream-btn';
+    b.innerHTML = `${it.name}<small>${it.dream}</small>`;
+    b.onclick = () => dreamUseItem(p.id);
+    acts.appendChild(b);
+  });
+  const back = document.createElement('button');
+  back.className = 'ink-btn dream-btn';
+  back.textContent = '算了';
+  back.onclick = () => dreamRender();
+  acts.appendChild(back);
+}
+function dreamUseItem(id) {
+  const i = S.pocket.findIndex((p) => p.id === id && p.n > 0);
+  if (i < 0) return dreamRender();
+  const it = ITEMS[id];
+  if (id === 'tanghulu') D.hp = Math.min(D.maxHp, D.hp + 15);
+  else if (id === 'soda') D.mp = Math.min(D.maxMp, D.mp + 10);
+  else if (id === 'noodle') D.hp = Math.min(D.maxHp, D.hp + 8);
+  else if (id === 'bento') D.hp = Math.min(D.maxHp, D.hp + 30);
+  else if (id === 'moms') { D.hp = Math.min(D.maxHp, D.hp + 60); }
+  else if (id === 'marble') D.marbleDodge = 0.1;
+  dreamLog(`你用掉了「${it.name}」。${it.lore}`);
+  S.pocket[i].n--;
+  if (S.pocket[i].n <= 0) S.pocket.splice(i, 1);
+  // 用道具也算一回合，心结逼近
+  dreamTurn('noop');
+}
+function dreamDoor() {
+  const boss = DREAM_BOSSES[dreamBand()];
+  dreamLog('小径的尽头，有一扇门。你推开了它——');
+  dreamEncounter(boss);
+}
+function dreamWake(how) {
+  const candy = D.candy;
+  S.candy = (S.candy || 0) + candy;
+  S.flags.dreamtToday = true;
+  $('modal-dream').classList.add('hidden');
+  if (how === 'good') {
+    gainNeed('心情', 8);
+    remember('你走到了梦的尽头，推开了那扇门。醒来的时候，枕头边好像还有星星的味道。');
+    addLog(`你带着 ${candy} 颗星星糖醒来了（攒着，以后能在梦里换好东西）。`, 'event');
+  } else if (how === 'scared') {
+    gainNeed('心情', -5); gainHealth(-2);
+    if (chance(0.3)) remember('你做了一个噩梦，惊醒的时候心怦怦跳。好在，天快亮了。');
+    addLog(`你惊醒了，心怦怦跳。摸索着喝了口水——还好，只是梦。（星星糖 +${candy}）`, 'event');
+  } else {
+    addLog(`你没往深处走，翻了个身醒了过来。（星星糖 +${candy}）`);
+  }
+  // 梦中练习反哺：梦里用过技艺，醒来手感顺了
+  if (D.usedArt && S.flags.art) {
+    gainSkill(S.flags.art, D.cleared ? 2 : 1);
+    addLog('梦里也在练，醒来手感顺了一点。', 'sys');
+  }
+  D = null;
+  sleep('你沉沉睡去，这一夜很长。');
+}
+function enterDream() {
+  if (eventLock || !S || !S.alive) return true;
+  dreamInit();
+  const m = $('modal-dream');
+  if (!m) return true;
+  $('dream-log').innerHTML = '';
+  const cg = $('dream-cg');
+  if (cg) { cg.classList.add('hidden'); cg.removeAttribute('src'); }
+  m.classList.remove('hidden');
+  Sound.play('page');
+  dreamLog(pick(['你闭上眼睛，云朵在脚下铺开成一条小路。', '迷迷糊糊间，你站在了一条软软的小径上。', '眼皮一沉，你走进了自己的梦里。']));
+  dreamRender();
+  return true;
 }
 
 /* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */

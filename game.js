@@ -2879,6 +2879,9 @@ function dreamTurn(kind, art) {
     dreamLog('纸盾稳稳接住了这一下。');
   }
   if (D.hp <= 0) { dreamWake('scared'); return; }
+  // CG 是遭遇的一眼亮相：首个回合后收起，战斗界面恢复紧凑（桌面 800px 高也能一眼看到全部按钮）
+  const dcg = $('dream-cg');
+  if (dcg) { dcg.classList.add('hidden'); }
   dreamRender();
 }
 function dreamPickItem() {

@@ -359,7 +359,7 @@ const EVENTS = [
   },
   /* ---- 河边专属（场景：river） ---- */
   {
-    id: 'river-boat-race', maxLife: 1, title: '纸船比赛', min: 4, max: 9, weight: 1.2,
+    id: 'river-boat-race', loc: 'river', maxLife: 1, title: '纸船比赛', min: 4, max: 9, weight: 1.2,
     cond: (s) => s.location === 'river',
     text: '你在河边放纸船，旁边蹲着一个不认识的小孩，手里也捏着一只。\n他看了看你，又看了看你的船：「比一比？看谁漂得远。」',
     choices: [
@@ -368,7 +368,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'river-laundry', maxLife: 1, title: '捣衣的奶奶', min: 3, max: 8,
+    id: 'river-laundry', loc: 'river', maxLife: 1, title: '捣衣的奶奶', min: 3, max: 8,
     cond: (s) => s.location === 'river' && s.slot <= 3,
     text: '河边的青石板上，一位奶奶在捶衣服，棒槌一起一落，「砰、砰」，水花溅得老高。\n她看见你，笑眯眯地从兜里摸出一颗水果糖。',
     choices: [
@@ -377,7 +377,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'river-splash', maxLife: 2, title: '踩水', min: 4, max: 11, weight: 1.2,
+    id: 'river-splash', loc: 'river', maxLife: 2, title: '踩水', min: 4, max: 11, weight: 1.2,
     cond: (s) => s.location === 'river' && s.slot >= 2 && s.slot <= 4,
     text: '日头把河水晒得温温的。你脱了鞋，把脚伸进水里——\n凉丝丝的，河底的鹅卵石滑滑的，小鱼苗碰了碰你的脚趾。',
     choices: [
@@ -386,7 +386,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'river-tadpole-grow', maxLife: 1, title: '蝌蚪长大了', min: 4, max: 11, weight: 5,
+    id: 'river-tadpole-grow', loc: 'river', maxLife: 1, title: '蝌蚪长大了', min: 4, max: 11, weight: 5,
     cond: (s) => s.location === 'river' && s.flags.tadpole && s.day > s.flags.tadpole + 4,
     text: '窗台上那只玻璃瓶里，你的蝌蚪变了样——尾巴短了，长出了两条后腿。\n它贴着瓶壁游来游去，好像在问：外面的世界是什么样的？',
     choices: [
@@ -395,7 +395,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'river-dusk', maxLife: 2, title: '河边的晚霞', min: 3, max: 17, weight: 0.9,
+    id: 'river-dusk', loc: 'river', maxLife: 2, title: '河边的晚霞', min: 3, max: 17, weight: 0.9,
     cond: (s) => s.location === 'river' && s.slot === 4,
     text: '傍晚的河边没什么人。晚霞掉进了水里，整条河都烧起来了，又慢慢暗下去。\n风从上游吹过来，带着水草和晚饭的味道。',
     choices: [
@@ -405,7 +405,7 @@ const EVENTS = [
   },
   /* ---- 少年宫专属（场景：palace） ---- */
   {
-    id: 'palace-first-day', maxLife: 1, title: '兴趣班第一天', min: 5, max: 8, weight: 5,
+    id: 'palace-first-day', loc: 'palace', maxLife: 1, title: '兴趣班第一天', min: 5, max: 8, weight: 5,
     cond: (s) => s.location === 'palace' && !!s.flags.art,
     text: '第一节课，教室里全是陌生面孔。老师点名的时候，你的手心有点出汗。\n课间十分钟，座位还没坐热，你已经开始打量这间教室了。',
     choices: [
@@ -414,7 +414,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'palace-own-painting', maxLife: 1, title: '挂出来的画', min: 6, max: 14, weight: 3,
+    id: 'palace-own-painting', loc: 'palace', maxLife: 1, title: '挂出来的画', min: 6, max: 14, weight: 3,
     cond: (s) => s.location === 'palace' && s.flags.art === '绘画' && ((s.skills.绘画 || { lvl: 1 }).lvl >= 3),
     text: '路过走廊展板的时候，你忽然站住了——\n新一批展览作品里，有一张是你的画。右下角端端正正写着你的名字。',
     choices: [
@@ -423,7 +423,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'palace-backstage', maxLife: 2, title: '后台十分钟', min: 7, max: 14, weight: 1.2,
+    id: 'palace-backstage', loc: 'palace', maxLife: 2, title: '后台十分钟', min: 7, max: 14, weight: 1.2,
     cond: (s) => s.location === 'palace' && !!s.flags.art && s.slot === 3,
     text: '汇报演出还有十分钟开场。后台乱成一团：有人在压腿，有人在背谱，主持人的领带歪了。\n你躲在大幕的缝隙后面，偷偷看了一眼台下——黑压压的全是人。',
     choices: [
@@ -432,7 +432,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'palace-eraser', maxLife: 1, title: '半块橡皮', min: 5, max: 9,
+    id: 'palace-eraser', loc: 'palace', maxLife: 1, title: '半块橡皮', min: 5, max: 9,
     cond: (s) => s.location === 'palace',
     text: '上课的时候，你的橡皮滚到了地上，骨碌碌滚到了同桌脚边。\n他捡起来看了看，把自己的橡皮掰了一半递给你：「喏，一人一半。」',
     choices: [

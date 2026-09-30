@@ -195,6 +195,41 @@ h3 {
 }
 .loc-btn.active { background: var(--ink); color: var(--paper); }
 .loc-btn:disabled { opacity: .3; cursor: not-allowed; }
+/* 图标条：场景简笔图标 + 地图入口 */
+.loc-icon { padding: 5px 10px; position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.loc-icon svg { width: 21px; height: 21px; display: block; }
+.map-open .map-dot {
+  position: absolute; top: 2px; right: 3px; width: 6px; height: 6px;
+  background: var(--accent); border-radius: 50%;
+  animation: mapDotPulse 1.8s ease-in-out infinite;
+}
+@keyframes mapDotPulse { 0%,100% { opacity: .9; } 50% { opacity: .35; } }
+/* 众生市地图弹层 */
+.map-box { max-width: 560px; position: relative; }
+#map-stage svg { width: 100%; height: auto; display: block; }
+.map-node { cursor: pointer; }
+.map-node text { fill: var(--ink); stroke: none; font-size: 8.5px; text-anchor: middle; font-family: inherit; letter-spacing: .1em; }
+.map-node .map-node-icon { transition: transform .15s; }
+.map-node:hover .map-node-icon { transform: translateY(-1.5px); }
+.map-node.locked { opacity: .32; cursor: default; stroke-dasharray: 3 3; }
+.map-node.locked text { stroke-dasharray: none; }
+.map-here { stroke: var(--accent); stroke-dasharray: 4 3; }
+.map-star { fill: var(--accent); stroke: none; }
+.map-deco { stroke: var(--gray); stroke-width: 1.6; }
+.map-road { stroke: var(--gray); stroke-width: 1.4; stroke-dasharray: 4 5; }
+#map-tip {
+  margin: 8px auto 0; width: fit-content; max-width: 90%;
+  padding: 4px 14px; font-size: 13.5px; text-align: center;
+  border: 1px dashed var(--gray); border-radius: 10px 4px 10px 4px;
+  background: rgba(255, 253, 247, 0.95); color: var(--ink);
+  animation: mapTipFade 2.6s ease forwards;
+}
+@keyframes mapTipFade {
+  0% { opacity: 0; transform: translateY(6px); }
+  12% { opacity: 1; transform: translateY(0); }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
 
 #scene-title { text-align: center; font-size: 20px; letter-spacing: .3em; margin-bottom: 2px; }
 #scene-desc { text-align: center; color: var(--gray); font-size: 14px; min-height: 22px; margin-bottom: 12px; }
@@ -763,6 +798,10 @@ h3 {
   /* 地点导航：均分两行 */
   #locations { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 6px; }
   .loc-btn { padding: 7px 4px; font-size: 14px; text-align: center; }
+  .loc-icon { padding: 8px 9px; }   /* 图标触控目标大一点 */
+  .loc-icon svg { width: 23px; height: 23px; }
+  .map-box { padding: 14px 12px; }
+  .map-node text { font-size: 9.5px; }
 
   /* 行动按钮：大触控目标，两列排布 */
   #actions { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 8px; }

@@ -1877,19 +1877,26 @@ function render() {
   // 情绪气泡
   if (S.needs.心情 < 25) actor.classList.add('moodlow'); else actor.classList.remove('moodlow');
   if (S.buffs.some((b) => b.name === '感冒')) actor.classList.add('sick'); else actor.classList.remove('sick');
-  // 地点导航
+  // 地点导航：简笔图标条 + 末尾地图入口
   const nav = $('locations');
   nav.innerHTML = '';
   Object.entries(SCENES).forEach(([id, sc]) => {
     const locked = S.age < sc.min;
     const btn = document.createElement('button');
-    btn.className = 'loc-btn' + (S.location === id ? ' active' : '');
-    btn.textContent = id === 'school' ? schoolTitle() : sc.title;
+    btn.className = 'loc-btn loc-icon' + (S.location === id ? ' active' : '');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${LOC_ICONS[id]}</svg>`;
     btn.disabled = locked;
-    btn.title = locked ? `${sc.min} 岁解锁` : '← → 方向键切换地点';
+    btn.title = locked ? `${mapTitle(id)} · ${sc.min} 岁解锁` : `${mapTitle(id)} · ← → 方向键切换地点`;
     btn.onclick = () => switchLocation(id);
     nav.appendChild(btn);
   });
+  const mapBtn = document.createElement('button');
+  mapBtn.className = 'loc-btn loc-icon map-open';
+  mapBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${MAP_ICON}</svg>` +
+    (freshScenes().size ? '<i class="map-dot"></i>' : '');
+  mapBtn.title = '众生市地图';
+  mapBtn.onclick = () => openMap();
+  nav.appendChild(mapBtn);
   // 场景（三层：远 / 中 / 近，随鼠标视差）
   const art = ART[S.location];
   const midArt = typeof art.mid === 'function' ? art.mid() : art.mid;
@@ -2166,6 +2173,19 @@ function startLife() {
   $('screen-game').classList.remove('hidden');
   render();
   if (!S.flags.tapHint) addLog('试着点点场景里的东西。', 'sys'); // 场景点触一次性提示
+  try { // 开局导览：第一次出生，自动展开一次众生市地图（避开事件弹窗，错峰再弹）
+    if (!localStorage.getItem('fusheng_map_intro_v1')) {
+      localStorage.setItem('fusheng_map_intro_v1', '1');
+      let tries = 0;
+      const tryOpen = () => {
+        tries++;
+        const evOpen = $('modal-event') && !$('modal-event').classList.contains('hidden');
+        if (evOpen && tries <= 10) { setTimeout(tryOpen, 1200); return; }
+        if (S && S.alive && !evOpen) openMap(true);
+      };
+      setTimeout(tryOpen, 900);
+    }
+  } catch (e) { /* localStorage 不可用时跳过导览 */ }
   runMilestones();
 }
 
@@ -2240,6 +2260,11 @@ window.addEventListener('keydown', (e) => {
   if (!S) return;
   if ($('screen-game').classList.contains('hidden')) return;
   if (!$('modal-memorial').classList.contains('hidden')) return;
+  // 地图弹窗：Esc 关闭，屏蔽场景快捷键
+  if ($('modal-map') && !$('modal-map').classList.contains('hidden')) {
+    if (e.key === 'Escape') closeMap();
+    return;
+  }
   // 事件弹窗：数字键选选项，回车/空格继续
   if (!$('modal-event').classList.contains('hidden')) {
     if (/^[1-9]$/.test(e.key)) {
@@ -2316,6 +2341,109 @@ function initSceneTaps() {
     });
     box.appendChild(t);
   }
+}
+
+/* ---------------- 众生市地图：图标条 + 全屏手绘小镇 ----------------
+ * 护栏一：地图只是导航的皮肤，不加任何赶路成本
+ * 护栏二：发现提示极轻——某场景有「没见过的专属事件」时画一个小星号，无红点无数字 */
+const LOC_ICONS = {
+  home: '<path d="M4 20 V11 l8 -6 8 6 v9"/><path d="M10 20 v-5 h4 v5"/>',
+  park: '<path d="M12 21 V10"/><circle cx="12" cy="8" r="5"/><path d="M7 21 h10"/>',
+  river: '<path d="M3 9 q3 -2.4 6 0 q3 2.4 6 0 q3 -2.4 6 0"/><path d="M3 14 q3 -2.4 6 0 q3 2.4 6 0 q3 -2.4 6 0"/><path d="M6 19 q3 -2.4 6 0 q3 2.4 6 0"/>',
+  school: '<rect x="5" y="9" width="14" height="11"/><path d="M5 9 l7 -4 7 4"/><path d="M12 5 V2 M12 2 h4"/>',
+  palace: '<rect x="6" y="10" width="12" height="10"/><path d="M6 10 L12 5 L18 10"/><path d="M12 5 V2 M12 2 l4 1.2 -4 1.4"/><path d="M8 14 h3 M13 14 h3"/>',
+  square: '<path d="M4 9 h16 l-2 5 H6 z"/><path d="M7 14 v6 M17 14 v6 M7 17 h10"/>',
+  market: '<path d="M4 10 h16 l-1.5 4 h-13 z"/><path d="M6 10 v-2 M10 10 v-2 M14 10 v-2 M18 10 v-2"/><path d="M6 14 v6 M18 14 v6"/>',
+  hospital: '<rect x="5" y="6" width="14" height="14"/><path d="M12 9 v8 M8 13 h8"/>',
+};
+const MAP_ICON = '<path d="M4 20 V8 l6 -4 6 4 v12 z"/><path d="M16 20 V10 l4 -2 v12"/><path d="M3 20 h18"/><circle cx="13" cy="12" r="2.4" stroke-dasharray="2 2"/>';
+const MAP_NODES = {
+  park:     { x: 34,  y: 30 },
+  school:   { x: 182, y: 27 },
+  river:    { x: 106, y: 63 },
+  home:     { x: 38,  y: 93 },
+  palace:   { x: 184, y: 76 },
+  square:   { x: 112, y: 102 },
+  market:   { x: 50,  y: 130 },
+  hospital: { x: 172, y: 126 },
+};
+const MAP_NODE_ART = {
+  home: '<path d="M-8 6 V-3 l8 -6 8 6 v9"/><path d="M-2.5 6 V1.5 h5 V6"/>',
+  park: '<path d="M0 8 V-3"/><circle cx="0" cy="-6" r="6"/><path d="M-6 8 h12"/>',
+  river: '<path d="M-9 -2 q3 -2.4 6 0 q3 2.4 6 0 q3 -2.4 6 0"/><path d="M-6 3 q3 -2.4 6 0 q3 2.4 6 0"/><path d="M-3 8 q3 -2.4 6 0"/>',
+  school: '<rect x="-8" y="-4" width="16" height="12"/><path d="M-8 -4 l8 -5 8 5"/><path d="M0 -9 v-4 M0 -13 h4.5"/>',
+  palace: '<rect x="-7" y="-3" width="14" height="11"/><path d="M-7 -3 L0 -8 L7 -3"/><path d="M0 -8 v-3.5 M0 -11.5 l4 1.2 -4 1.4"/><path d="M-3.5 2 h3 M1.5 2 h3"/>',
+  square: '<path d="M-9 -6 h18 l-2 5.5 h-14 z"/><path d="M-6 -0.5 v8.5 M6 -0.5 v8.5 M-6 4.5 h12"/>',
+  market: '<path d="M-9 -4 h18 l-1.5 4.5 h-15 z"/><path d="M-6 -4 v-2.5 M-2 -4 v-2.5 M2 -4 v-2.5 M6 -4 v-2.5"/><path d="M-6 0.5 v7.5 M6 0.5 v7.5"/>',
+  hospital: '<rect x="-7" y="-8" width="14" height="16"/><path d="M0 -4.5 v7 M-3.5 -1 h7"/>',
+};
+function mapTitle(id) { return id === 'school' ? schoolTitle() : SCENES[id].title; }
+/* 某场景存在「没见过且当前可触发」的专属事件（events.js 里带 loc 标签的） */
+function freshScenes() {
+  const set = new Set();
+  if (!S || !S.alive || typeof EVENTS === 'undefined') return set;
+  EVENTS.forEach((e) => {
+    if (!e.loc || set.has(e.loc)) return;
+    if (S.flags['seen:' + e.id]) return;
+    if (S.age < e.min || S.age > e.max) return;
+    for (let slot = 0; slot < 6; slot++) {
+      try {
+        if (!e.cond || e.cond(Object.assign({}, S, { location: e.loc, slot }))) { set.add(e.loc); break; }
+      } catch (err) { /* cond 读取了不可用字段就当不可触发 */ }
+    }
+  });
+  return set;
+}
+function showMapTip(text, ms) {
+  const tip = $('map-tip');
+  if (!tip) return;
+  tip.textContent = text;
+  tip.classList.remove('hidden');
+  clearTimeout(showMapTip._t);
+  showMapTip._t = setTimeout(() => tip.classList.add('hidden'), ms || 2400);
+}
+function buildMap() {
+  const stage = $('map-stage');
+  if (!stage) return;
+  const fresh = freshScenes();
+  const deco =
+    '<path class="map-deco" d="M-6 46 Q 46 56 88 76 T 226 112"/>' +
+    '<path class="map-deco" d="M-6 56 Q 50 66 92 86 T 226 122"/>' +
+    '<path class="map-road" d="M44 96 Q 76 92 100 100 M120 100 Q 148 88 172 80 M120 106 Q 146 116 164 122 M58 122 Q 84 112 104 106 M46 84 Q 40 60 36 42"/>' +
+    '<path class="map-deco" d="M14 14 q3 -3 6 0 q3 -3 6 0 M96 12 q3 -3 6 0 q3 -3 6 0"/>' +
+    '<g class="map-deco"><animateTransform attributeName="transform" type="translate" values="0 0;10 -6;0 0" dur="8s" repeatCount="indefinite"/>' +
+    '<path d="M146 8 l4 5 -4 5 -4 -5 z"/><path d="M146 18 q1.5 4 -1 7" stroke-dasharray="2 2"/></g>';
+  const nodes = Object.keys(SCENES).map((id) => {
+    const n = MAP_NODES[id];
+    const locked = S.age < SCENES[id].min;
+    const star = !locked && fresh.has(id) ? '<path class="map-star" d="M13 -13 l1.5 3.2 3.2 1.5 -3.2 1.5 -1.5 3.2 -1.5 -3.2 -3.2 -1.5 3.2 -1.5 z"><animate attributeName="opacity" values="1;.35;1" dur="1.8s" repeatCount="indefinite"/></path>' : '';
+    const here = S.location === id ? '<ellipse class="map-here" cx="0" cy="1" rx="13" ry="11"/>' : '';
+    return `<g class="map-node${locked ? ' locked' : ''}${S.location === id ? ' here' : ''}" data-loc="${id}" transform="translate(${n.x},${n.y})">` +
+      here + '<g class="map-node-icon">' + MAP_NODE_ART[id] + '</g>' +
+      `<text y="20">${mapTitle(id)}</text>` + star + '</g>';
+  }).join('');
+  stage.innerHTML = `<svg viewBox="0 0 220 150" fill="none" stroke="#1c1c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="list">${deco}${nodes}</svg>`;
+  stage.querySelectorAll('.map-node').forEach((g) => {
+    g.addEventListener('click', () => {
+      const id = g.getAttribute('data-loc');
+      if (S.age < SCENES[id].min) { showMapTip('等你再长大一点（' + SCENES[id].min + ' 岁解锁）。'); return; }
+      closeMap();
+      if (id !== S.location) switchLocation(id);
+    });
+  });
+}
+function openMap(intro) {
+  if (!S || !S.alive) return;
+  const m = $('modal-map');
+  if (!m) return;
+  buildMap();
+  m.classList.remove('hidden');
+  Sound.play('page');
+  if (intro) showMapTip('这是众生市。点一个图标，就能去那里。', 4200);
+}
+function closeMap() {
+  const m = $('modal-map');
+  if (m) m.classList.add('hidden');
 }
 
 /* ---------------- 移动端长按解释气泡：复用元素的 title 文案 ---------------- */
@@ -2425,6 +2553,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   $('btn-memorial').onclick = () => { renderMemorials(); $('modal-memorial').classList.remove('hidden'); };
   $('btn-memorial-close').onclick = () => $('modal-memorial').classList.add('hidden');
+  $('btn-map-close').onclick = closeMap;
   // 戳一戳小人（简笔 svg 与立绘层都挂：立绘模式下 svg 隐藏点不到）
   const poke = () => {
     if (!S || !S.alive || eventLock) return;

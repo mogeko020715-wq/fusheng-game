@@ -36,9 +36,9 @@ const { chromium } = require('/Users/maxine/Documents/Kimi/Workspaces/Investigat
     out.shopBtns = ['一夜好梦', '云朵枕头', '梦的礼物', '小小衣柜', '算了'].every((k) => btns.some((t) => t.includes(k)));
     const wardrobe = [...document.querySelectorAll('#dream-acts .dream-btn')].find((b) => b.textContent.includes('小小衣柜'));
     out.wardrobeDisabled = wardrobe.disabled === true;
-    // ③ 买「一夜好梦」：扣 4 糖、标记祝福、再买变禁用
+    // ③ 买「一夜好梦」：扣 5 糖、标记祝福、再买变禁用
     [...document.querySelectorAll('#dream-acts .dream-btn')].find((b) => b.textContent.includes('一夜好梦')).click();
-    out.blessBought = D.bless.mood === true && dreamCandy() === 8;
+    out.blessBought = D.bless.mood === true && dreamCandy() === 7;
     const again = [...document.querySelectorAll('#dream-acts .dream-btn')].find((b) => b.textContent.includes('一夜好梦'));
     out.blessOnce = again.disabled === true;
     // ④ 算了回到小径 → 前进到遭遇

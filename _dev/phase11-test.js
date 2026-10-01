@@ -103,11 +103,11 @@ const driver = `
   const kids = () => document.getElementById('dream-acts').children;
   const find = (key) => kids().find((c) => c._html && c._html.indexOf(key) >= 0);
   find('一夜好梦')._onclick();
-  R.moodBought = D.bless.mood === true && dreamCandy() === 16;
+  R.moodBought = D.bless.mood === true && dreamCandy() === 15; // 调价 5 颗
   R.moodOnceDisabled = find('一夜好梦').disabled === true;
   S.pocket = [];
   find('梦的礼物')._onclick();
-  R.giftGot = S.pocket.length === 1 && dreamCandy() === 8;
+  R.giftGot = S.pocket.length === 1 && dreamCandy() === 5; // 15 - 10
   S.pocket = [
     { id: 'tanghulu', n: 3 }, { id: 'soda', n: 3 }, { id: 'noodle', n: 3 },
     { id: 'bento', n: 3 }, { id: 'moms', n: 3 }, { id: 'marble', n: 3 },

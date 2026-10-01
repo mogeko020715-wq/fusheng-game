@@ -2617,7 +2617,7 @@ function renderShop() {
  * 护栏：惊醒只扣 心情-5/健康-2；随时可醒来；战斗属性全部由养成数值换算 */
 const DREAM_FOES = {
   s: [ // 3-6 岁
-    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里变得好大好大，白大褂的衣角扫过地板。', intro2: '白大褂的影子又追上来了，针尖一闪一闪。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。', win2: '你又盯着它看了一会儿。影子好像比上次更小了。' },
+    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里晃悠悠，白大褂的衣角扫过地板。', intro2: '白大褂的影子好似追上来了，针尖一闪一闪。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。', win2: '你又盯着它看了一会儿。影子好像比上次更小了。' },
     { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 4, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', intro2: '那只大狗还在巷口。看见你，它的尾巴先摇了半下，又停住了。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。', win2: '这次它直接蹭了蹭你的手，毛茸茸的。' },
     { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 4, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', intro2: '雷声又滚过来了。可你已经知道怎么数它了。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。', win2: '三、二、一——雷声这次走得更远了。' },
     { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', intro2: '房间又黑下来了，椅子还蹲在老地方。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。', win2: '「啪」。还是只有你的椅子。你早就知道了。' },
@@ -2643,6 +2643,45 @@ const DREAM_FLUKES = [ // 奇遇：25% 概率
   { txt: '一张长椅开在云上，你坐下来歇了歇。', run: () => { D.hp = Math.min(D.maxHp, D.hp + 10); } },
   { txt: '一个记忆泡泡飘过来，里面是白天的事。', run: () => { gainNeed('心情', 3); } },
 ];
+/* ---------------- 梦物：单场生效的轻构筑（三选一） ---------------- */
+const DREAM_RELICS = [
+  { id: 'plane',   name: '纸飞机',   desc: '闪避 +5%',                       lore: '折得歪歪扭扭，飞得倒很直。' },
+  { id: 'marble2', name: '口袋弹珠', desc: '每场遭遇，心结第一次逼近必被闪开', lore: '弹珠滚向哪边，你就往哪边躲。' },
+  { id: 'candywrap', name: '糖纸',   desc: '化开心结时额外 +1 星星糖',       lore: '每一张都包过一颗糖，甜是有记忆的。' },
+  { id: 'water',   name: '凉白开',   desc: '每次遭遇开始时勇气 +4',          lore: '梦里最解渴的东西。' },
+  { id: 'chit',    name: '小抄',     desc: '「动动脑筋」心力消耗 -1',        lore: '上面写满了对付心结的小聪明。' },
+];
+function hasDreamRelic(id) { return !!(D && D.relics.includes(id)); }
+function dreamRelicStock() { return DREAM_RELICS.filter((r) => !D.relics.includes(r.id)); }
+function dreamRelicPick() {
+  const acts = $('dream-acts');
+  if (!acts) return;
+  dreamLog('路边飘着几件发亮的小东西——你只能拿一件。');
+  acts.innerHTML = '';
+  dreamRelicStock().sort(() => Math.random() - 0.5).slice(0, 3).forEach((r) => {
+    const b = document.createElement('button');
+    b.className = 'ink-btn dream-btn';
+    b.innerHTML = `${r.name}<small>${r.desc}</small>`;
+    b.title = r.lore; // 移动端长按气泡会复用 title
+    b.onclick = () => {
+      D.relics.push(r.id);
+      Sound.play('chime');
+      dreamLog(`你捡起了「${r.name}」。${r.lore}`);
+      dreamRender();
+    };
+    acts.appendChild(b);
+  });
+  // 都不拿：换 2 颗星星糖
+  const skip = document.createElement('button');
+  skip.className = 'ink-btn dream-btn';
+  skip.innerHTML = '都不拿<small>换 2 颗星星糖</small>';
+  skip.onclick = () => {
+    D.candy += 2;
+    dreamLog('你摆摆手，小东西们化作了两颗星星糖，落进你手心。');
+    dreamRender();
+  };
+  acts.appendChild(skip);
+}
 let D = null; // 梦境临时状态，不入存档
 function dreamBand() { return S.age <= 6 ? 's' : S.age <= 12 ? 'm' : 'l'; }
 function dreamInit() {
@@ -2657,6 +2696,12 @@ function dreamInit() {
     candy: 0, usedArts: {}, cleared: false, bless: {},
     seenFoes: {}, wonFoes: {},
     foe: null, foeDodge: 0, marbleDodge: 0,
+    relics: [],          // 本场捡到的梦物 id
+    vuln: false,         // 破绽：下一次「迎上去」双倍
+    backTrack: 0,        // 连续后退次数（回血递减用）
+    foeFleeN: 0,         // 对当前心结的退避失败次数（成功率递减用）
+    foeFirstMove: false, // 当前心结是否已逼近过（口袋弹珠用）
+    eliteDone: false,    // 本场梦的「大心结」是否已出现过
   };
   D.hp = D.maxHp; D.mp = D.maxMp;
 }
@@ -2734,7 +2779,8 @@ function dreamPickSkill() {
     if (disabled) b.disabled = true;
     acts.appendChild(b);
   };
-  mk('动动脑筋', () => dreamTurn('skill', null), '心力 -4', D.mp < 4);
+  const thinkCost = hasDreamRelic('chit') ? 3 : 4;
+  mk('动动脑筋', () => dreamTurn('skill', null), `心力 -${thinkCost} · 找破绽`, D.mp < thinkCost);
   Object.keys(DREAM_ART_SKILL).forEach((art) => {
     const lvl = (S.skills[art] || { lvl: 0 }).lvl;
     if (lvl < 2) return; // 2 级解锁
@@ -2744,8 +2790,13 @@ function dreamPickSkill() {
 }
 function dreamStep() {
   D.pos++;
+  D.backTrack = 0; // 往前走一步，后退递减重置
   Sound.play('scratch');
   if (D.pos >= D.steps) { dreamDoor(); return; }
+  // 梦物三选一：固定在第 3、7 步，节奏上先于门前增压
+  if ((D.pos === 3 || D.pos === 7) && dreamRelicStock().length) { dreamRelicPick(); return; }
+  // 门前增压：推门前的最后一站必遇「大心结」，每场梦只一次
+  if (D.pos === D.steps - 1 && !D.eliteDone) { D.eliteDone = true; dreamEncounter(null, true); return; }
   const roll = Math.random();
   if (roll < 0.6) dreamEncounter();
   else if (roll < 0.85) {
@@ -2763,8 +2814,12 @@ function dreamBack() {
   Sound.play('scratch');
   if (D.pos === 0) { dreamWake('voluntary'); return; }
   D.pos--;
-  D.hp = Math.min(D.maxHp, D.hp + 3);
-  dreamLog('你回头走了一小段，心跳慢了下来（勇气 +3）。');
+  const heal = Math.max(0, 3 - D.backTrack);
+  D.backTrack++;
+  D.hp = Math.min(D.maxHp, D.hp + heal);
+  dreamLog(heal > 0
+    ? `你回头走了一小段，心跳慢了下来（勇气 +${heal}）。`
+    : '你回头走了一小段，可心跳怎么也慢不下来了。');
   dreamRender();
 }
 /* 星星糖：程内梦境货币。银行（S.candy）+ 本场掉落（D.candy）合计可用，先花刚捡的 */
@@ -2777,9 +2832,9 @@ function spendCandy(n) {
   return true;
 }
 const DREAM_BLESSINGS = [
-  { id: 'mood', name: '一夜好梦', cost: 4, once: true, desc: '醒来心情 +10', lore: '把甜味儿压在枕头底下，梦都是软的。' },
-  { id: 'energy', name: '云朵枕头', cost: 4, once: true, desc: '醒来精力 +10', lore: '枕着云朵睡觉，怎么会累呢。' },
-  { id: 'gift', name: '梦的礼物', cost: 8, once: false, desc: '枕边多一件小东西', lore: '梦里捡到的，醒来居然还在。' },
+  { id: 'mood', name: '一夜好梦', cost: 5, once: true, desc: '醒来心情 +10', lore: '把甜味儿压在枕头底下，梦都是软的。' },
+  { id: 'energy', name: '云朵枕头', cost: 5, once: true, desc: '醒来精力 +10', lore: '枕着云朵睡觉，怎么会累呢。' },
+  { id: 'gift', name: '梦的礼物', cost: 10, once: false, desc: '枕边多一件小东西', lore: '梦里捡到的，醒来居然还在。' },
 ];
 const DREAM_GIFT_POOL = ['tanghulu', 'soda', 'noodle', 'marble'];
 function dreamCandyShop() {
@@ -2822,36 +2877,56 @@ function dreamCandyShop() {
   back.onclick = () => dreamRender();
   acts.appendChild(back);
 }
-function dreamEncounter(boss) {
+function dreamEncounter(boss, elite) {
   let f = boss;
   if (!f) {
     const pool = DREAM_FOES[dreamBand()];
     const unseen = pool.filter((x) => !D.seenFoes[x.id]);
     f = pick(unseen.length ? unseen : pool); // 优先没见过的心结，都见过了才复撞
   }
+  // 纵深与门前增压：只作用于普通心结，Boss 数值不动
+  if (!boss) {
+    if (elite) {
+      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.5), atk: f.atk + 1, elite: true });
+    } else if (D.pos > Math.floor(D.steps / 2)) {
+      // 后半程：心结变沉（HP +15% 再 +2，atk +1）
+      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.15) + 2, atk: f.atk + 1 });
+    }
+  }
   const again = !!D.seenFoes[f.id];
   D.seenFoes[f.id] = true;
   D.foe = Object.assign({}, f, { maxHp: f.hp, isBoss: !!boss });
   D.foeShield = 0; D.foeCalm = 0;
+  D.foeFleeN = 0; D.foeFirstMove = false; D.vuln = false;
+  if (hasDreamRelic('water')) {
+    D.hp = Math.min(D.maxHp, D.hp + 4);
+    dreamLog('你拧开凉白开抿了一口，心定了（勇气 +4）。');
+  }
   const cg = $('dream-cg');
   if (f.cg) { cg.src = 'assets/cg/' + f.cg + '.png'; cg.classList.remove('hidden'); }
   else { cg.classList.add('hidden'); cg.removeAttribute('src'); }
   dreamLog(again && f.intro2 ? f.intro2 : f.intro);
+  if (elite) dreamLog('这一只比路上的都要沉——门已经很近了。');
   dreamRender();
 }
 function dreamTurn(kind, art) {
   const f = D.foe;
   if (!f) return;
   if (kind === 'atk') {
-    const d = Math.round(D.atk + rand(0, 4));
+    const base = D.atk + rand(0, 4);
+    const d = Math.round(D.vuln ? base * 2 : base); // 破绽双倍
+    const wasVuln = D.vuln;
+    D.vuln = false;
     f.hp -= d;
-    dreamLog(pick([
-      `你迎上去，稳稳地站住了（-${d}）。`,
-      `你往前一步，心结就退了一步（-${d}）。`,
-      `你攥紧小拳头挥过去，心结晃了一晃（-${d}）。`,
-      `你没有躲。心结撞上你，反倒自己淡了淡（-${d}）。`,
-      `你大喊了一声——不知道喊的什么，反正心结抖了一下（-${d}）。`,
-    ]));
+    dreamLog(wasVuln
+      ? `心结的破绽被你抓个正着——你迎上去，它一下子淡了一大截（-${d}）。`
+      : pick([
+        `你迎上去，稳稳地站住了（-${d}）。`,
+        `你往前一步，心结就退了一步（-${d}）。`,
+        `你攥紧小拳头挥过去，心结晃了一晃（-${d}）。`,
+        `你没有躲。心结撞上你，反倒自己淡了淡（-${d}）。`,
+        `你大喊了一声——不知道喊的什么，反正心结抖了一下（-${d}）。`,
+      ]));
   } else if (kind === 'skill') {
     const lvl = art ? (S.skills[art] || { lvl: 0 }).lvl : 0;
     if (art && lvl >= 2) {
@@ -2859,30 +2934,33 @@ function dreamTurn(kind, art) {
       D.mp -= 6; D.usedArts[art] = true;
       DREAM_ART_SKILL[art].run(lvl);
     } else if (!art) {
-      if (D.mp < 4) return dreamRender();
-      D.mp -= 4;
-      const d = Math.round(S.attrs.智力 * 0.15 + rand(0, 3));
-      f.hp -= d;
+      const cost = hasDreamRelic('chit') ? 3 : 4; // 小抄减费
+      if (D.mp < cost) return dreamRender();
+      D.mp -= cost;
+      D.vuln = true; // 动脑筋改为「找破绽」，不再直接造成伤害
       dreamLog(pick([
-        `你开动脑筋想了想，心结的破绽露了出来（-${d}）。`,
-        `你歪着头打量它——原来这个地方一碰就散（-${d}）。`,
-        `你想起白天学到的东西，照着试了试（-${d}）。`,
+        '你开动脑筋想了想，心结的破绽露了出来。',
+        '你歪着头打量它——原来这个地方一碰就散。',
+        '你想起白天学到的东西，知道下一步该怎么走了。',
       ]));
     } else { return dreamRender(); }
   } else if (kind === 'item') {
     return dreamPickItem();
   } else if (kind === 'flee') {
-    if (chance(0.7)) {
+    const fleeCh = Math.max(0.3, 0.7 - 0.2 * D.foeFleeN); // 连续退避成功率递减
+    if (chance(fleeCh)) {
       dreamLog(pick(['你悄悄退开了。心结没有追上来。', '你踮着脚退开几步，心结没有发现。']));
       D.foe = null; D.marbleDodge = 0; D.pos = Math.max(0, D.pos - 1);
       dreamRender();
       return;
     }
+    D.foeFleeN++;
     dreamLog(pick(['你想退开，心结却缠了上来——', '你刚转身，心结就贴了过来——']));
   }
   // 心结化开判定
   if (f.hp <= 0) {
-    const gain_candy = f.isBoss ? 8 : 1 + (chance(0.4) ? 1 : 0);
+    const gain_candy = (f.isBoss ? 8 : (f.elite ? 3 : 1 + (chance(0.4) ? 1 : 0)))
+      + (hasDreamRelic('candywrap') ? 1 : 0); // 糖纸
     D.candy += gain_candy;
     const winTxt = (D.wonFoes[f.id] && f.win2) ? f.win2 : f.win; // 当晚再次化开同一心结，用短变体
     D.wonFoes[f.id] = true;
@@ -2898,7 +2976,10 @@ function dreamTurn(kind, art) {
   if (D.foeCalm > 0) { atk = Math.max(1, Math.round(atk * 0.5)); D.foeCalm--; }
   let hurt = Math.max(1, Math.round(atk - D.def + rand(0, 2)));
   if (D.foeShield > 0) { hurt = Math.max(0, hurt - 6); D.foeShield--; }
-  if (Math.random() < D.dodge + (D.marbleDodge || 0)) {
+  if (hasDreamRelic('marble2') && !D.foeFirstMove) { // 口袋弹珠：首次逼近必闪
+    D.foeFirstMove = true;
+    dreamLog(pick(['口袋里的弹珠一烫——你下意识侧身，心结扑了个空。', '弹珠在口袋里滚了一圈，你跟着它的劲儿闪开了。']));
+  } else if (Math.random() < D.dodge + (D.marbleDodge || 0) + (hasDreamRelic('plane') ? 0.05 : 0)) {
     dreamLog(pick(['你身子一侧，心结扑了个空。', '你蹲下一低头，心结从头顶掠了过去。', '你往旁边跳了半步，心结撞了个寂寞。']));
   } else if (hurt > 0) {
     D.hp -= hurt;

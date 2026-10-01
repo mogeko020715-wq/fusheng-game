@@ -76,11 +76,17 @@ globalThis.__play = function play() {
           const art = Object.keys(b.arts).find((a) => (S.skills[a] || {}).lvl >= 2);
           if (D.hp < D.maxHp * 0.35 && S.pocket.some((p) => p.id === 'bento')) dreamUseItem('bento');
           else if (art && D.mp >= 6) dreamTurn('skill', art);
-          else if (D.mp >= 4) dreamTurn('skill', null);
-          else dreamTurn('atk');
+          else if (!D.vuln && D.mp >= 4) dreamTurn('skill', null); // 动脑筋找破绽（零伤害）
+          else dreamTurn('atk'); // 有破绽就迎上去打双倍
         } else {
           if (cur) { cur.hpLost = cur.hp0 - D.hp; cur = null; }
-          dreamStep();
+          // 梦物三选一：自动拿第一件（skip 按钮带「都不拿」字样时说明在三选一界面）
+          const acts = document.getElementById('dream-acts');
+          if (acts.children.some((c) => (c._html || '').indexOf('都不拿') >= 0)) {
+            acts.children[0]._onclick();
+          } else {
+            dreamStep();
+          }
         }
       }
       if (cur) { cur.hpLost = cur.hp0 - (D ? D.hp : 0); }

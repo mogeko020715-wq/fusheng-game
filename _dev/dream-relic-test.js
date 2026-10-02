@@ -134,7 +134,7 @@ const driver = `
   dreamStep(); // pos 9 = steps-1 → elite
   const eliteBase = DREAM_FOES[dreamBand()].find((x) => x.id === D.foe.id);
   R.eliteSpawn = D.foe.elite === true && D.eliteDone === true &&
-    D.foe.maxHp === Math.round(eliteBase.hp * 1.5) && D.foe.atk === eliteBase.atk + 1;
+    D.foe.maxHp === Math.round(eliteBase.hp * 1.5) && D.foe.atk === eliteBase.atk + 2;
   const c2 = D.candy;
   D.foe.hp = 1; dreamTurn('atk');
   R.eliteCandy = (D.candy - c2) === 3; // 无梦物，恰为 3
@@ -143,11 +143,11 @@ const driver = `
   R.eliteOnce = !(D.foe && D.foe.elite);
   D.foe = null;
 
-  // 12. 后半程变沉：pos > steps/2 的普通心结 HP×1.15+2、atk+1；前半程不变
+  // 12. 后半程变沉：pos > steps/2 的普通心结 HP×1.25+2、atk+2；前半程不变
   D.pos = 6; D.steps = 10; // > 5
   dreamEncounter();
   const midBase = DREAM_FOES[dreamBand()].find((x) => x.id === D.foe.id);
-  R.lateBuff = D.foe.maxHp === Math.round(midBase.hp * 1.15) + 2 && D.foe.atk === midBase.atk + 1;
+  R.lateBuff = D.foe.maxHp === Math.round(midBase.hp * 1.25) + 2 && D.foe.atk === midBase.atk + 2;
   D.foe = null; D.seenFoes = {};
   D.pos = 1;
   dreamEncounter();

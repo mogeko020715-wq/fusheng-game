@@ -2617,25 +2617,25 @@ function renderShop() {
  * 护栏：惊醒只扣 心情-5/健康-2；随时可醒来；战斗属性全部由养成数值换算 */
 const DREAM_FOES = {
   s: [ // 3-6 岁
-    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 3, intro: '针头的影子在梦里晃悠悠，白大褂的衣角扫过地板。', intro2: '白大褂的影子好似追上来了，针尖一闪一闪。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。', win2: '你又盯着它看了一会儿。影子好像比上次更小了。' },
-    { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 4, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', intro2: '那只大狗还在巷口。看见你，它的尾巴先摇了半下，又停住了。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。', win2: '这次它直接蹭了蹭你的手，毛茸茸的。' },
-    { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 4, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', intro2: '雷声又滚过来了。可你已经知道怎么数它了。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。', win2: '三、二、一——雷声这次走得更远了。' },
-    { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 3, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', intro2: '房间又黑下来了，椅子还蹲在老地方。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。', win2: '「啪」。还是只有你的椅子。你早就知道了。' },
+    { id: 'needle', cg: 'cg-dream-needle', name: '白大褂的影子', hp: 14, atk: 4, intro: '针头的影子在梦里晃悠悠，白大褂的衣角扫过地板。', intro2: '白大褂的影子好似追上来了，针尖一闪一闪。', win: '你盯着它看了一会儿——原来影子被灯光一照，就变小了。', win2: '你又盯着它看了一会儿。影子好像比上次更小了。' },
+    { id: 'dog', cg: 'cg-dream-dog', name: '巷口的大狗', hp: 16, atk: 5, intro: '那只大狗堵在巷口，眼睛在梦里亮得像两盏灯。', intro2: '那只大狗还在巷口。看见你，它的尾巴先摇了半下，又停住了。', win: '你蹲下来，它闻了闻你的手，尾巴摇了摇。原来它只是想认识认识你。', win2: '这次它直接蹭了蹭你的手，毛茸茸的。' },
+    { id: 'thunder', cg: 'cg-dream-thunder', name: '轰隆隆的雷', hp: 12, atk: 5, intro: '天黑得像锅底，雷声从云的后面滚过来，一声比一声近。', intro2: '雷声又滚过来了。可你已经知道怎么数它了。', win: '你数了数闪电和雷声的间隔——一、二、三——原来它在慢慢走远。', win2: '三、二、一——雷声这次走得更远了。' },
+    { id: 'dark', cg: 'cg-dream-dark', name: '关灯后的房间', hp: 14, atk: 4, intro: '房间的轮廓全变了，椅子像蹲着的什么，窗帘在动。', intro2: '房间又黑下来了，椅子还蹲在老地方。', win: '你摸到了墙上的开关。「啪」——什么都没有，只有你的椅子。', win2: '「啪」。还是只有你的椅子。你早就知道了。' },
   ],
   m: [ // 7-12 岁
-    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 5, intro: '一张卷子在你面前展开，59 分被黑笔重重圈了两圈，大得占满了整张纸。', intro2: '卷子又摊开了，那个分数还是那么大。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。', win2: '你把卷子又折好了一次。它好像没有上次那么沉了。' },
-    { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 6, intro: '几个高个子影子拦在路中间，笑声闷闷的。', intro2: '那几个影子又拦在路中间，笑得没有上次响了。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。', win2: '你走过去的时候，影子们让得比上次更快了。' },
-    { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 5, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', intro2: '客厅又空了，钟摆还是敲得很响。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。', win2: '你熟门熟路地打开了所有的灯，还去添了碗饭。' },
+    { id: 'exam59', cg: 'cg-dream-exam59', name: '59 分的卷子', hp: 24, atk: 6, intro: '一张卷子在你面前展开，59 分被黑笔重重圈了两圈，大得占满了整张纸。', intro2: '卷子又摊开了，那个分数还是那么大。', win: '你把卷子折起来放进口袋。分数是一时的，弄懂的题是你的。', win2: '你把卷子又折好了一次。它好像没有上次那么沉了。' },
+    { id: 'bully', cg: 'cg-dream-bully', name: '高年级的影子', hp: 28, atk: 7, intro: '几个高个子影子拦在路中间，笑声闷闷的。', intro2: '那几个影子又拦在路中间，笑得没有上次响了。', win: '你没有低头，直直地看着他们走过去。影子让你让出了路。', win2: '你走过去的时候，影子们让得比上次更快了。' },
+    { id: 'alone', cg: 'cg-dream-alone', name: '空荡荡的客厅', hp: 22, atk: 6, intro: '家里一个人都没有，钟摆的声音特别响，饭桌上的菜凉了。', intro2: '客厅又空了，钟摆还是敲得很响。', win: '你给自己盛了碗饭，打开了所有的灯。一个人也能把家照亮。', win2: '你熟门熟路地打开了所有的灯，还去添了碗饭。' },
   ],
   l: [ // 13-17 岁
-    { id: 'rank', cg: 'cg-dream-rank', name: '红榜的影子', hp: 34, atk: 7, intro: '一张望不到头的榜单，你的名字在很后面很后面。', intro2: '榜单又立在那里，长得没有尽头。', win: '你把目光从别人的名字上收回来。你的路，不在那张纸上。', win2: '你又把目光收了回来。一次比一次容易。' },
-    { id: 'farewell', cg: 'cg-dream-farewell', name: '毕业的钟声', hp: 32, atk: 7, intro: '钟声一响，教室里的身影一个个变淡，你怎么喊都没有人回头。', intro2: '钟声又响了，教室里的身影又开始变淡。', win: '你不再喊了。你记住他们的样子，然后朝前走。', win2: '你朝变淡的身影挥了挥手，然后朝前走。' },
+    { id: 'rank', cg: 'cg-dream-rank', name: '红榜的影子', hp: 34, atk: 8, intro: '一张望不到头的榜单，你的名字在很后面很后面。', intro2: '榜单又立在那里，长得没有尽头。', win: '你把目光从别人的名字上收回来。你的路，不在那张纸上。', win2: '你又把目光收了回来。一次比一次容易。' },
+    { id: 'farewell', cg: 'cg-dream-farewell', name: '毕业的钟声', hp: 32, atk: 8, intro: '钟声一响，教室里的身影一个个变淡，你怎么喊都没有人回头。', intro2: '钟声又响了，教室里的身影又开始变淡。', win: '你不再喊了。你记住他们的样子，然后朝前走。', win2: '你朝变淡的身影挥了挥手，然后朝前走。' },
   ],
 };
 const DREAM_BOSSES = {
-  s: { id: 'firstnight', cg: 'cg-dream-firstnight', name: '分床睡的第一夜', hp: 30, atk: 5, intro: '门后是一间只属于你的小房间，床有点大，夜有点长。', win: '你躺下来，把被子拉到下巴。原来一个人睡，也没那么难。' },
-  m: { id: 'finalexam', cg: 'cg-dream-finalexam', name: '期末考', hp: 46, atk: 8, intro: '门后是一间安静的考场，卷子雪白雪白，等着落笔。', win: '你一道一道写下来。交卷铃响的时候，你的手心是干的。' },
-  l: { id: 'future-self', cg: 'cg-dream-future-self', name: '未来的自己', hp: 58, atk: 9, intro: '门后站着一个大人，眉眼和你很像，正静静地看着你。', win: '那个大人朝你笑了笑，说：「慢慢来，我等你。」' },
+  s: { id: 'firstnight', cg: 'cg-dream-firstnight', name: '分床睡的第一夜', hp: 35, atk: 6, intro: '门后是一间只属于你的小房间，床有点大，夜有点长。', win: '你躺下来，把被子拉到下巴。原来一个人睡，也没那么难。' },
+  m: { id: 'finalexam', cg: 'cg-dream-finalexam', name: '期末考', hp: 53, atk: 9, intro: '门后是一间安静的考场，卷子雪白雪白，等着落笔。', win: '你一道一道写下来。交卷铃响的时候，你的手心是干的。' },
+  l: { id: 'future-self', cg: 'cg-dream-future-self', name: '未来的自己', hp: 67, atk: 10, intro: '门后站着一个大人，眉眼和你很像，正静静地看着你。', win: '那个大人朝你笑了笑，说：「慢慢来，我等你。」' },
 };
 const DREAM_FLUKES = [ // 奇遇：25% 概率
   { txt: '一朵糖果云飘过来，你抓了两把星星糖。', run: () => { D.candy += 2; } },
@@ -2887,10 +2887,10 @@ function dreamEncounter(boss, elite) {
   // 纵深与门前增压：只作用于普通心结，Boss 数值不动
   if (!boss) {
     if (elite) {
-      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.5), atk: f.atk + 1, elite: true });
+      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.5), atk: f.atk + 2, elite: true });
     } else if (D.pos > Math.floor(D.steps / 2)) {
-      // 后半程：心结变沉（HP +15% 再 +2，atk +1）
-      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.15) + 2, atk: f.atk + 1 });
+      // 后半程：心结变沉（HP +25% 再 +2，atk +2）
+      f = Object.assign({}, f, { hp: Math.round(f.hp * 1.25) + 2, atk: f.atk + 2 });
     }
   }
   const again = !!D.seenFoes[f.id];

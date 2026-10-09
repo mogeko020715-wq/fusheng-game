@@ -48,19 +48,8 @@ const Sound = {
       if (typeof navigator !== 'undefined' && navigator.audioSession) {
         try { if (navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { /* iOS <17 无此 API */ }
       }
-      // 老 iOS 兜底：循环一段近无声的 HTML 音频，把音频会话顶到媒体通道
-      // 小工具模式（FUSHENG_NO_BGM）：容器 CSP 禁 data: 媒体，跳过此兜底
-      const minitoolMode = typeof window !== 'undefined' && !!window.FUSHENG_NO_BGM;
-      if (!this._duck && typeof Audio !== 'undefined' && !minitoolMode) {
-        try {
-          const a = new Audio('data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YcgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
-          a.loop = true;
-          a.volume = 0.02;
-          const pr = a.play();
-          if (pr && typeof pr.catch === 'function') pr.catch(() => {});
-          this._duck = a;
-        } catch (e) { /* 忽略 */ }
-      }
+      // 小工具容器 CSP 禁止 data: 媒体，HTML Audio 解锁兜底已移除；
+      // 仅保留 Web Audio resume + 一帧静音缓冲，足够唤醒音频会话
       if (this._asleep()) {
         const p = this.ctx.resume();
         if (p && typeof p.then === 'function') {
@@ -140,15 +129,11 @@ const Sound = {
  * 与音效共用同一个已解锁的 AudioContext，锁定态自动等待。 */
 const Bgm = {
   enabled: true,
-  volume: 1,       // 音乐音量 0-1，设置页滑条控制；file 模式乘在 audio.volume 上，synth 模式乘在音符力度上
+  volume: 1,       // 音乐音量 0-1，设置页滑条控制；乘在八音盒音符力度上
   timer: null,
   idx: 0,          // 下一个待调度事件
   loopStart: 0,    // 本轮循环在 ctx 时间轴上的起点
   UNIT: 0.14,      // 十六分音符时长（秒），流动的琶音速度
-  FILE: 'assets/audio/bgm-bwv1007-guitar.mp3', // 可选音频文件（网页版专属）
-  audio: null,
-  mode: 'synth',   // 'file'（音频文件）优先，加载失败自动回退 'synth'（八音盒）
-  _fileReady: false,
   // 前八小节琶音（每小节两组八分解，每组 8 音）：
   // C | Dm7/C | G7/B | C | Am | D7/C | G/B | C
   MELODY: [
@@ -186,50 +171,9 @@ const Bgm = {
       t += u;
     });
     this.loopUnits = t;
-    // 网页版：预载音频文件，就绪后接替八音盒
-    if (typeof Audio !== 'undefined') {
-      try {
-        const a = new Audio(this.FILE);
-        a.loop = true;
-        a.volume = 0.42 * this.volume;
-        a.preload = 'auto';
-        // 用 canplay 而非 canplaythrough：后者要等几乎整首缓存完（5MB 弱网下延迟几十秒），
-        // canplay 缓冲几秒即可流式起播，边播边缓冲
-        a.addEventListener('canplay', () => {
-          this._fileReady = true;
-          this._tryStartFile();
-        });
-        a.addEventListener('error', () => {
-          // 音频文件缺席（如小红书离线包）：留在八音盒模式
-          this._fileReady = false;
-          this.audio = null;
-          this.mode = 'synth';
-        });
-        this.audio = a;
-        if (a.load) a.load();
-      } catch (e) { /* 无 Audio 环境则留在合成模式 */ }
-    }
     this.start();
   },
-  _startFile() {
-    if (!this.audio) return;
-    this.mode = 'file';
-    if (this.audio.paused) {
-      try {
-        const p = this.audio.play();
-        if (p && typeof p.catch === 'function') p.catch(() => { this.mode = 'synth'; });
-      } catch (e) { this.mode = 'synth'; }
-    }
-  },
-  _tryStartFile() {
-    if (!this._fileReady || !this.enabled || this.mode === 'file') return;
-    // 已经解锁过（用户摸过屏幕）就立刻起播，否则等下一次手势
-    if (Sound.ctx && !Sound._asleep()) this._startFile();
-  },
-  unlock() {
-    // 在用户手势调用栈里：音频就绪则起播/切换
-    if (this._fileReady && this.enabled) this._startFile();
-  },
+  unlock() {}, // 小工具构建无音频文件，解锁仅由 Sound 负责
   start() {
     if (this.timer || typeof setInterval !== 'function') return;
     this.timer = setInterval(() => this.tick(), 120);
@@ -237,19 +181,13 @@ const Bgm = {
   resync() { this.loopStart = 0; this.idx = 0; }, // 解锁/回来后对齐时间轴
   setVolume(v) {
     this.volume = Math.max(0, Math.min(1, v));
-    if (this.audio) { try { this.audio.volume = 0.42 * this.volume; } catch (e) { /* 忽略 */ } }
     try { localStorage.setItem('fusheng_bgm_vol', String(this.volume)); } catch (e) { /* 忽略 */ }
   },
   toggle() {
     if (this.noBgm) return false; // 无背景音乐构建：开关不存在
     this.enabled = !this.enabled;
     try { localStorage.setItem('fusheng_bgm', this.enabled ? '1' : '0'); } catch (e) { /* 忽略 */ }
-    if (this.enabled) {
-      Sound.ensure(); this.resync(); this.start();
-      this._tryStartFile();
-    } else if (this.audio && !this.audio.paused) {
-      try { this.audio.pause(); } catch (e) { /* 忽略 */ }
-    }
+    if (this.enabled) { Sound.ensure(); this.resync(); this.start(); }
     return this.enabled;
   },
   // 八音盒音色：基音正弦 + 高八度泛音一闪，指数衰减像钢片琴
@@ -270,7 +208,7 @@ const Bgm = {
   // 前瞻调度：每次把未来 0.5s 内的音符排上时间轴
   tick() {
     const c = Sound.ctx;
-    if (!this.enabled || !c || !this.events.length || this.mode === 'file') return;
+    if (!this.enabled || !c || !this.events.length) return;
     try {
       if (Sound._asleep()) return; // iOS 未解锁：等 unlock() 的 resync
       if (!this.loopStart || this.loopStart < c.currentTime - 0.3) {
@@ -2163,7 +2101,7 @@ function codexCollectEvent(id) {
   const set = new Set(loadJson(CODEX_EV_KEY, []));
   if (!set.has(id)) { set.add(id); saveJson(CODEX_EV_KEY, [...set]); }
 }
-/* 技能图鉴：一世落幕时沉淀——历史最高等级 / 解锁过的专精方向 / 出师礼 / 组合技 */
+/* 技能图鉴：一程落幕时沉淀——历史最高等级 / 解锁过的专精方向 / 出师礼 / 组合技 */
 function codexMergeLife() {
   const rec = loadJson(CODEX_SK_KEY, { skills: {}, combos: [] });
   Object.entries(S.skills).forEach(([n, v]) => {
@@ -3129,6 +3067,8 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   initTipPop();
   initSceneTaps();
+  const dcg0 = $('dream-cg'); // 容器 CSP 禁行内事件，CG 加载失败的隐藏兜底绑在这里
+  if (dcg0) dcg0.onerror = () => dcg0.classList.add('hidden');
   const sb = $('btn-sound');
   const syncSndBtn = () => { sb.textContent = Sound.muted ? '🔇' : '🔊'; };
   syncSndBtn();

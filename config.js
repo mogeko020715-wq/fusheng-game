@@ -1,4 +1,3 @@
-/* 可选配置：在 game.js 之前加载。
- * 小红书小工具包（dist）里此文件为 FUSHENG_NO_BGM = true —— 容器白名单不含音频文件类型，
- * 背景音乐整个移除；网页版保留此默认配置，背景音乐正常。 */
-window.FUSHENG_NO_BGM = false;
+/* 小红书小工具构建：容器白名单不含音频文件类型，且 CSP 禁止 data: 媒体。
+ * 背景音乐整体关闭（设置页对应项自动隐藏）；音效走 Web Audio 程序合成，不受影响。 */
+window.FUSHENG_NO_BGM = true;

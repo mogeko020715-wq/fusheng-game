@@ -39,6 +39,14 @@ const driver = `
   // 9. 热点动作都存在于公园 ACTIONS 或能回退散步（浏览器上下文才有 ACTIONS，这里只校验 id 拼写）
   R.spotActs = ROAM_SPOTS.every((s2) => /^[a-z]+$/.test(s2.act) && s2.label.length >= 2);
 
+  // 10. 跳跃抛物线：起止贴地、中点最高、左右对称
+  const D = ROAM_CFG.jumpDur, H = ROAM_CFG.jumpH;
+  R.jumpEnds = roamJumpY(0, D, H) === 0 && roamJumpY(D, D, H) === 0 && roamJumpY(-5, D, H) === 0 && roamJumpY(D + 5, D, H) === 0;
+  R.jumpPeak = Math.abs(roamJumpY(D / 2, D, H) + H) < 1e-9;
+  R.jumpSym = Math.abs(roamJumpY(D * 0.25, D, H) - roamJumpY(D * 0.75, D, H)) < 1e-9;
+  // 11. 跳跃帧：五段均分，起跳 jump-1、顶点 jump-3、收尾 jump-5
+  R.jumpFrames = roamJumpFrame(1, D) === 'jump-1' && roamJumpFrame(D / 2, D) === 'jump-3' && roamJumpFrame(D - 1, D) === 'jump-5';
+
   console.log(JSON.stringify(R, null, 1));
   const pass = Object.values(R).every(Boolean);
   console.log(pass ? 'ROAM TEST PASSED' : 'ROAM TEST FAILED');

@@ -6,8 +6,9 @@
 const ROAM_CFG = {
   sceneW: 2400, sceneH: 600,   // 场景坐标系（单位 = 世界像素，渲染时按高度缩放）
   bandTop: 392, bandBot: 468,  // 地面带：小人 y 可走范围（伪纵深）
-  walkSpd: 120, runSpd: 200,   // 单位/秒
+  walkSpd: 120, runSpd: 240,   // 单位/秒
   runThresh: 0.85,             // 摇杆力度阈值：推到底切跑
+  jumpDur: 650, jumpH: 72,     // 跳跃时长 ms / 高度（场景单位）
   joyR: 56, deadzone: 8,       // 摇杆半径 / 死区（屏幕 px）
   camLerp: 0.14,               // 镜头跟随平滑系数
   spotR: 130, spotDY: 60,      // 热点触发半径（x / y）
@@ -38,6 +39,16 @@ function roamSpotAt(x, y) {
     if (Math.abs(x - s.x) <= ROAM_CFG.spotR && Math.abs(y - s.y) <= ROAM_CFG.spotDY) return s;
   }
   return null;
+}
+/* 跳跃抛物线：t∈[0,dur] → 离地高度（负值=向上）；起止都贴地 */
+function roamJumpY(t, dur, h) {
+  if (t <= 0 || t >= dur) return 0;
+  return -Math.sin(Math.PI * t / dur) * h;
+}
+/* 跳跃帧：五帧按进度均分 */
+function roamJumpFrame(t, dur) {
+  const i = Math.min(4, Math.floor(t / dur * 5));
+  return 'jump-' + (i + 1);
 }
 
 /* ---------------- 场景线稿（2400×600，黑白手绘） ---------------- */
@@ -117,6 +128,7 @@ const ROAM_SVG_FRONT = `<svg width="2700" height="600" viewBox="0 0 2700 600" fi
 const ROAM_FRAME = {
   walk: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
   run: ['run-1', 'run-2', 'run-3', 'run-4'],
+  jump: ['jump-1', 'jump-2', 'jump-3', 'jump-4', 'jump-5'],
 };
 const ROAM_SPRITE_DIR = 'assets/actor/sprites/';
 const roamCache = {};
@@ -126,7 +138,7 @@ function roamOn() { return !!(roam && roam.on); }
 
 function roamPreload() {
   if (typeof Image === 'undefined') return;
-  ROAM_FRAME.walk.concat(ROAM_FRAME.run, ['stand', 'happy', 'weak', 'sick']).forEach((n) => {
+  ROAM_FRAME.walk.concat(ROAM_FRAME.run, ROAM_FRAME.jump, ['stand', 'happy', 'weak', 'sick']).forEach((n) => {
     if (roamCache[n]) return;
     const im = new Image();
     im.src = ROAM_SPRITE_DIR + n + '.png';
@@ -166,6 +178,7 @@ function enterRoam() {
     ix: 0, iy: 0, run: false,
     joyId: null, joyCX: 0, joyCY: 0, joyDX: 0, joyDY: 0,
     keys: {}, frame: '', frameT: 0, frameI: 0,
+    jumpT: -1, // -1 = 不在跳；>=0 为已起跳毫秒数
     spot: null, lastLog: '', logTimer: 0, lastT: 0,
   };
   document.getElementById('roam-far').innerHTML = ROAM_SVG_FAR;
@@ -253,6 +266,14 @@ function roamLoop(now) {
   roam.y = Math.max(ROAM_CFG.bandTop, Math.min(ROAM_CFG.bandBot, roam.y + vy * spd * 0.55 * dt));
   if (vx > 0.05) roam.dir = 1; else if (vx < -0.05) roam.dir = -1;
 
+  // 跳跃推进（空中不影响移动）
+  let jumpY = 0;
+  if (roam.jumpT >= 0) {
+    roam.jumpT += dt * 1000;
+    if (roam.jumpT >= ROAM_CFG.jumpDur) { roam.jumpT = -1; }
+    else jumpY = roamJumpY(roam.jumpT, ROAM_CFG.jumpDur, ROAM_CFG.jumpH);
+  }
+
   // 镜头跟随（lerp）
   const camMax = Math.max(0, ROAM_CFG.sceneW - viewW);
   const target = roamCamClamp(roam.x - viewW / 2, camMax);
@@ -272,13 +293,15 @@ function roamLoop(now) {
   const actor = document.getElementById('roam-actor');
   if (actor) {
     actor.style.transform =
-      `translate(${roam.x}px, ${roam.y}px) translate(-50%, -100%) scale(${scale}) scaleX(${roam.dir})`;
+      `translate(${roam.x}px, ${roam.y + jumpY}px) translate(-50%, -100%) scale(${scale}) scaleX(${roam.dir})`;
   }
 
-  // 帧动画
+  // 帧动画：跳跃 > 走跑 > 待机
   const moving = Math.hypot(vx, vy) > 0.05;
   roam.frameT += dt * 1000;
-  if (moving) {
+  if (roam.jumpT >= 0) {
+    roamSetFrame(roamJumpFrame(roam.jumpT, ROAM_CFG.jumpDur));
+  } else if (moving) {
     const set = running ? ROAM_FRAME.run : ROAM_FRAME.walk;
     const interval = running ? 95 : 150;
     if (roam.frameT >= interval) {
@@ -325,6 +348,13 @@ function roamLoop(now) {
   }
 }
 
+/* 起跳：空中不二段跳，弹窗时不跳 */
+function roamJump() {
+  if (!roam || !roam.on || roam.jumpT >= 0 || roamBusy()) return;
+  roam.jumpT = 0;
+  if (typeof Sound !== 'undefined') Sound.play('scratch');
+}
+
 /* ---------------- 摇杆（dynamic：落点即中心）与键盘 ---------------- */
 function roamBind() {
   const root = document.getElementById('roam');
@@ -367,6 +397,9 @@ function roamBind() {
   root.addEventListener('touchstart', (e) => {
     const t = e.changedTouches[0];
     if (inZone(t.clientX, t.clientY, e.target)) { e.preventDefault(); joyStart(t.clientX, t.clientY, t.identifier); }
+    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back')) {
+      e.preventDefault(); roamJump(); // 右半屏点按 = 跳
+    }
   }, { passive: false });
   root.addEventListener('touchmove', (e) => {
     if (!roam || roam.joyId === null) return;
@@ -379,9 +412,12 @@ function roamBind() {
   });
   root.addEventListener('touchcancel', joyEnd);
 
-  // 桌面鼠标同款
+  // 桌面鼠标同款：左区摇杆，右区点按跳
   root.addEventListener('mousedown', (e) => {
     if (inZone(e.clientX, e.clientY, e.target)) { e.preventDefault(); joyStart(e.clientX, e.clientY, 'mouse'); }
+    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back')) {
+      roamJump();
+    }
   });
   if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('mousemove', (e) => { if (roam && roam.joyId === 'mouse') joyMove(e.clientX, e.clientY); });
@@ -392,7 +428,8 @@ function roamBind() {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'a', 's', 'd', 'Shift'].indexOf(k2) >= 0) {
         roam.keys[k2] = true;
         if (k2.indexOf('Arrow') === 0) e.preventDefault();
-      } else if (e.key === 'Escape') { exitRoam(); }
+      } else if (e.key === ' ') { e.preventDefault(); roamJump(); }
+      else if (e.key === 'Escape') { exitRoam(); }
     });
     window.addEventListener('keyup', (e) => {
       if (!roam) return;

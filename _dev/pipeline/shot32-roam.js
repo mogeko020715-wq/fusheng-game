@@ -59,6 +59,18 @@ const { chromium } = require('/Users/maxine/Documents/Kimi/Workspaces/Investigat
   await page.waitForTimeout(300);
   out.stop = await page.evaluate(() => ({ frame: roam.frame, joy: roam.joyId === null }));
 
+  // ③b 点右半屏 = 跳跃：空中帧 + 抛物线顶点离地
+  await page.evaluate(() => roamJump());
+  await page.waitForTimeout(300); // 跳到一半
+  out.jump = await page.evaluate(() => ({
+    mid: roam.jumpT > 0 && roam.jumpT < 650,
+    frame: roam.frame,
+    transform: document.getElementById('roam-actor').style.transform.includes('NaN') ? 'NaN!' : 'ok',
+  }));
+  await page.screenshot({ path: '_dev/shots/shot32-jump-mobile.png' });
+  await page.waitForTimeout(500);
+  out.jumpLand = await page.evaluate(() => roam.jumpT === -1 && roam.frame === 'stand');
+
   // ④ 走到滑梯热点 → 按钮浮出；走远 → 收起
   await page.evaluate(() => { roam.x = 1930; roam.y = 436; });
   await page.waitForTimeout(400);

@@ -1367,7 +1367,7 @@ body.roam-lock { overflow: hidden; }
 
 /* 漫游内日志：单行淡入淡出 */
 #roam-log {
-  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
   max-width: 86vw; z-index: 4; pointer-events: none;
   font-size: 13px; letter-spacing: 1px; text-align: center;
   color: var(--ink); background: rgba(255,255,255,.78);
@@ -1375,6 +1375,40 @@ body.roam-lock { overflow: hidden; }
   opacity: 0; transition: opacity .4s;
 }
 #roam-log.show { opacity: 1; }
+
+/* 漫游 HUD：左上时间表 + 右上地图入口 */
+#roam-hud {
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); right: calc(10px + env(safe-area-inset-right, 0px));
+  z-index: 4; display: flex; justify-content: space-between; align-items: flex-start;
+  pointer-events: none;
+}
+#roam-time {
+  font-size: 12px; letter-spacing: 1.5px; color: var(--ink);
+  background: rgba(255,255,255,.72); border: 1.5px solid rgba(28,28,28,.55);
+  border-radius: 12px 3px 12px 3px / 3px 12px 3px 12px;
+  padding: 5px 12px; white-space: nowrap;
+}
+#roam-map {
+  pointer-events: auto; width: 38px; height: 38px; padding: 6px;
+  color: var(--ink); background: rgba(255,255,255,.82);
+  border: 1.5px solid var(--ink); border-radius: 12px 3px 12px 3px / 3px 12px 3px 12px;
+  cursor: pointer; font: inherit;
+}
+#roam-map svg { display: block; width: 100%; height: 100%; }
+#roam-map:active { transform: scale(.94); }
+
+/* 漫游的时辰天色：与主界面 slot-N 同一套色卡 */
+#roam.slot-0 { background: #f6efdd; }
+#roam.slot-1, #roam.slot-2 { background: #fbf9f3; }
+#roam.slot-3 { background: #f6f2e7; }
+#roam.slot-4 { background: #f0e4cf; }
+#roam.slot-5 { background: #1f2742; }
+/* 夜晚：线稿反白，文字只填不描 */
+#roam.slot-5 svg * { stroke: #d9d4c7; }
+#roam.slot-5 svg text { stroke: none; fill: #d9d4c7; }
+#roam.slot-5 #roam-time, #roam.slot-5 #roam-map {
+  color: #d9d4c7; background: rgba(31,39,66,.72); border-color: rgba(217,212,199,.6);
+}
 
 #roam-back {
   position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));

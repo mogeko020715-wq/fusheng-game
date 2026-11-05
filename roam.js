@@ -333,6 +333,23 @@ function roamBuildScene() {
     b.addEventListener('click', () => roamDoSpot(s));
     box.appendChild(b);
   });
+  if (roam && typeof S !== 'undefined' && S) roam.builtLoc = S.location;
+}
+
+/* 时间表 + 天色：帧率无关，变了才写 */
+function roamHudSync() {
+  if (typeof S === 'undefined' || !S) return;
+  const root = document.getElementById('roam');
+  const t = document.getElementById('roam-time');
+  const txt = S.age + ' 岁 · 第 ' + S.day + ' 天 · ' +
+    (typeof SLOTS !== 'undefined' ? SLOTS[S.slot] : '') +
+    (typeof MEAL_SLOTS !== 'undefined' && MEAL_SLOTS.indexOf(S.slot) >= 0 ? ' · 饭点' : '');
+  if (t && roam.lastHud !== txt) { roam.lastHud = txt; t.textContent = txt; }
+  if (root && roam.lastSlot !== S.slot) {
+    roam.lastSlot = S.slot;
+    root.classList.remove('slot-0', 'slot-1', 'slot-2', 'slot-3', 'slot-4', 'slot-5');
+    root.classList.add('slot-' + S.slot);
+  }
 }
 
 /* ---------------- 进入 / 退出 / 过街 ---------------- */
@@ -493,6 +510,12 @@ function roamLoop(now) {
     roamSetFrame(roamIdleFrame());
   }
 
+  // 位置守望：地图跳转 / 边缘过街落地后重建场景（roamBuildScene 内置幂等标记）
+  if (S && roam.builtLoc !== S.location) roamBuildScene();
+
+  // 时间表与天色
+  roamHudSync();
+
   // 热点：走近且有可执行动作才亮按钮
   const rawSpot = roamBusy() ? null : roamSpotAt(roam.x, roam.y, roamScene().spots);
   const spot = rawSpot && roamSpotAction(rawSpot) ? rawSpot : null;
@@ -570,14 +593,14 @@ function roamBind() {
   };
   const inZone = (x, y, t) => {
     const w = root.clientWidth || 390;
-    if (t && t.closest && (t.closest('.roam-spot') || t.closest('#roam-back') || t.closest('.roam-edge'))) return false;
+    if (t && t.closest && (t.closest('.roam-spot') || t.closest('#roam-back') || t.closest('.roam-edge') || t.closest('#roam-hud'))) return false;
     return x < w * 0.62; // 左 62% 屏幕为摇杆区，右侧留给跳跃点按与按钮
   };
 
   root.addEventListener('touchstart', (e) => {
     const t = e.changedTouches[0];
     if (inZone(t.clientX, t.clientY, e.target)) { e.preventDefault(); joyStart(t.clientX, t.clientY, t.identifier); }
-    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back') && !e.target.closest('.roam-edge')) {
+    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back') && !e.target.closest('.roam-edge') && !e.target.closest('#roam-hud')) {
       e.preventDefault(); roamJump(); // 右半屏点按 = 跳
     }
   }, { passive: false });
@@ -595,7 +618,7 @@ function roamBind() {
   // 桌面鼠标同款：左区摇杆，右区点按跳
   root.addEventListener('mousedown', (e) => {
     if (inZone(e.clientX, e.clientY, e.target)) { e.preventDefault(); joyStart(e.clientX, e.clientY, 'mouse'); }
-    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back') && !e.target.closest('.roam-edge')) {
+    else if (e.target && e.target.closest && !e.target.closest('.roam-spot') && !e.target.closest('#roam-back') && !e.target.closest('.roam-edge') && !e.target.closest('#roam-hud')) {
       roamJump();
     }
   });
@@ -624,6 +647,13 @@ function roamBind() {
   if (prevB) prevB.addEventListener('click', () => roamEdgeGo(-1));
   const nextB = document.getElementById('roam-next');
   if (nextB) nextB.addEventListener('click', () => roamEdgeGo(1));
+  const mapB = document.getElementById('roam-map');
+  if (mapB) {
+    if (typeof MAP_ICON !== 'undefined') {
+      mapB.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + MAP_ICON + '</svg>';
+    }
+    mapB.addEventListener('click', () => { if (typeof openMap === 'function') openMap(); });
+  }
   const enterBtn = document.getElementById('btn-roam');
   if (enterBtn) enterBtn.addEventListener('click', enterRoam);
 }

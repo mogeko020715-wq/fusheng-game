@@ -1,0 +1,48 @@
+/* 漫游模式定向补测：摇杆向量 / 镜头夹取 / 热点命中 */
+const fs = require('fs');
+const src = fs.readFileSync('roam.js', 'utf8');
+const driver = `
+;(function roamTest(){
+  const R = {};
+  const CFG = { joyR: 56, deadzone: 8 };
+
+  // 1. 摇杆：死区内为零
+  let v = roamJoyVec(3, 3, CFG.joyR, CFG.deadzone);
+  R.deadzone = v.x === 0 && v.y === 0 && v.mag === 0;
+  // 2. 满推右：x=1, run=true
+  v = roamJoyVec(56, 0, CFG.joyR, CFG.deadzone);
+  R.fullRight = Math.abs(v.x - 1) < 1e-9 && v.run === true;
+  // 3. 超出半径被夹到 1
+  v = roamJoyVec(200, 0, CFG.joyR, CFG.deadzone);
+  R.clamped = Math.abs(v.mag - 1) < 1e-9;
+  // 4. 半推不跑、方向归一
+  v = roamJoyVec(0, 20, CFG.joyR, CFG.deadzone);
+  R.halfDown = v.run === false && Math.abs(v.mag - 20 / 56) < 1e-9 && v.y > 0.3 && v.y < 0.4;
+  // 5. 斜向归一化：模长不超 1
+  v = roamJoyVec(40, 40, CFG.joyR, CFG.deadzone);
+  R.diagNorm = Math.hypot(v.x, v.y) <= 1 + 1e-9;
+
+  // 6. 镜头夹取：负值归零、超界取最大、中间原样
+  R.camClamp = roamCamClamp(-50, 1000) === 0 && roamCamClamp(1200, 1000) === 1000 && roamCamClamp(300, 1000) === 300;
+
+  // 7. 热点命中：范围内命中、范围外 null、y 轴也卡
+  const s = roamSpotAt(700, 438);
+  R.spotHit = s && s.id === 'tree';
+  R.spotMissX = roamSpotAt(860, 438) === null;
+  R.spotMissY = roamSpotAt(700, 438 + 120) === null;
+  // 8. 四个热点互不重叠（两两 x 距离 > 2R）
+  let overlap = false;
+  for (let i = 0; i < ROAM_SPOTS.length; i++) for (let j = i + 1; j < ROAM_SPOTS.length; j++) {
+    if (Math.abs(ROAM_SPOTS[i].x - ROAM_SPOTS[j].x) <= ROAM_CFG.spotR * 2) overlap = true;
+  }
+  R.spotNoOverlap = !overlap;
+  // 9. 热点动作都存在于公园 ACTIONS 或能回退散步（浏览器上下文才有 ACTIONS，这里只校验 id 拼写）
+  R.spotActs = ROAM_SPOTS.every((s2) => /^[a-z]+$/.test(s2.act) && s2.label.length >= 2);
+
+  console.log(JSON.stringify(R, null, 1));
+  const pass = Object.values(R).every(Boolean);
+  console.log(pass ? 'ROAM TEST PASSED' : 'ROAM TEST FAILED');
+  if (!pass) process.exit(1);
+})();
+`;
+eval(src + driver);

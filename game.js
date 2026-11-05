@@ -1928,6 +1928,9 @@ function render() {
     `<div class="lyr lyr-near">${art.near}</div>`;
   $('scene-title').textContent = S.location === 'school' ? schoolTitle() : SCENES[S.location].title;
   $('scene-desc').textContent = SCENES[S.location].desc();
+  // 漫游模式入口：目前只开在公园（十三期原型）
+  const roamBtn = $('btn-roam');
+  if (roamBtn && roamBtn.classList) roamBtn.classList.toggle('hidden', S.location !== 'park' || typeof enterRoam !== 'function');
   // 动作：正当其时主按钮 + 常做 2×2 + 随性 chip 排——一个都不藏，只分层
   const box = $('actions');
   box.innerHTML = '';
@@ -2343,6 +2346,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (eventLock || !S.alive) return;
+  if (typeof roamOn === 'function' && roamOn()) return; // 漫游中：方向键归摇杆，数字键不触发按钮
   if (/^[1-9]$/.test(e.key)) {
     const btn = $('actions').querySelectorAll('.act-btn')[+e.key - 1];
     if (btn && typeof btn.click === 'function') btn.click();

@@ -214,6 +214,7 @@
           </g>
         </svg>
         <span id="actor-sprite-wrap" aria-hidden="true"><span id="actor-bed"></span><span id="actor-sprite-bob"><img id="actor-sprite" alt=""></span></span>
+        <button id="btn-roam" class="hidden" title="推着摇杆，在公园里四处走走">出去走走</button>
         <div id="actor-fx" aria-hidden="true">
           <span class="mb mb-happy1">♪</span>
           <span class="mb mb-happy2">♡</span>
@@ -294,9 +295,25 @@
 </div>
 
 <div id="tip-pop" class="hidden" role="tooltip"></div>
+
+<!-- ============ 漫游模式（十三期 · 公园原型） ============ -->
+<div id="roam" class="hidden" aria-hidden="true">
+  <div id="roam-far" aria-hidden="true"></div>
+  <div id="roam-world">
+    <div id="roam-mid" aria-hidden="true"></div>
+    <div id="roam-actor"><img id="roam-actor-img" alt=""></div>
+    <div id="roam-spots"></div>
+  </div>
+  <div id="roam-front" aria-hidden="true"></div>
+  <div id="roam-log" aria-live="polite"></div>
+  <button id="roam-back" class="ink-btn">回去</button>
+  <div id="roam-joy" class="hidden" aria-hidden="true"><div id="roam-joy-knob"></div></div>
+</div>
+
 <div id="fx-layer"></div>
 <script src="./config.js"></script>
 <script src="./events.js"></script>
 <script src="./game.js"></script>
+<script src="./roam.js"></script>
 </body>
 </html>

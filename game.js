@@ -1928,9 +1928,9 @@ function render() {
     `<div class="lyr lyr-near">${art.near}</div>`;
   $('scene-title').textContent = S.location === 'school' ? schoolTitle() : SCENES[S.location].title;
   $('scene-desc').textContent = SCENES[S.location].desc();
-  // 漫游模式入口：目前只开在公园（十三期原型）
+  // 漫游模式入口：十四期起全场景开放
   const roamBtn = $('btn-roam');
-  if (roamBtn && roamBtn.classList) roamBtn.classList.toggle('hidden', S.location !== 'park' || typeof enterRoam !== 'function');
+  if (roamBtn && roamBtn.classList) roamBtn.classList.toggle('hidden', typeof enterRoam !== 'function');
   // 动作：正当其时主按钮 + 常做 2×2 + 随性 chip 排——一个都不藏，只分层
   const box = $('actions');
   box.innerHTML = '';

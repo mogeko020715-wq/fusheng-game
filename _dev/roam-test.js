@@ -1,7 +1,9 @@
 /* 漫游模式定向补测：摇杆向量 / 镜头夹取 / 热点命中 */
 const fs = require('fs');
 const src = fs.readFileSync('roam.js', 'utf8');
+const gameSrc = fs.readFileSync('game.js', 'utf8');
 const driver = `
+const GAME_SRC = ${JSON.stringify(gameSrc)};
 ;(function roamTest(){
   const R = {};
   const CFG = { joyR: 56, deadzone: 8 };
@@ -46,6 +48,29 @@ const driver = `
   R.jumpSym = Math.abs(roamJumpY(D * 0.25, D, H) - roamJumpY(D * 0.75, D, H)) < 1e-9;
   // 11. 跳跃帧：五段均分，起跳 jump-1、顶点 jump-3、收尾 jump-5
   R.jumpFrames = roamJumpFrame(1, D) === 'jump-1' && roamJumpFrame(D / 2, D) === 'jump-3' && roamJumpFrame(D - 1, D) === 'jump-5';
+
+  // 12. 十四期：八场景登记齐全
+  const WANT = ['home', 'park', 'river', 'school', 'palace', 'square', 'market', 'hospital'];
+  R.scenesAll = WANT.every((k) => ROAM_SCENES[k] && Array.isArray(ROAM_SCENES[k].spots) && ROAM_SCENES[k].spots.length >= 2);
+  // 13. 每个场景的 act/fallback 拼写合法、label 非空，且存在于 game.js 的 ACTIONS
+  const gsrc = GAME_SRC;
+  R.spotActsExist = WANT.every((k) => ROAM_SCENES[k].spots.every((sp) =>
+    /^[a-z]+$/.test(sp.act) && sp.label && sp.label.length >= 2 &&
+    (!sp.fallback || /^[a-z]+$/.test(sp.fallback)) &&
+    gsrc.includes("'" + sp.act + "'") && (!sp.fallback || gsrc.includes("'" + sp.fallback + "'"))));
+  // 14. 同场景内热点两两不重叠（x 间距 > 2R）
+  R.sceneNoOverlap = WANT.every((k) => {
+    const sp = ROAM_SCENES[k].spots;
+    for (let i = 0; i < sp.length; i++) for (let j = i + 1; j < sp.length; j++) {
+      if (Math.abs(sp[i].x - sp[j].x) <= ROAM_CFG.spotR * 2) return false;
+    }
+    return true;
+  });
+  // 15. 热点 id 同场景内唯一
+  R.spotIdUniq = WANT.every((k) => {
+    const ids = ROAM_SCENES[k].spots.map((sp) => sp.id);
+    return new Set(ids).size === ids.length;
+  });
 
   console.log(JSON.stringify(R, null, 1));
   const pass = Object.values(R).every(Boolean);

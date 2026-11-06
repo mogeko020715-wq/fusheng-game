@@ -1410,6 +1410,59 @@ body.roam-lock { overflow: hidden; }
   color: #d9d4c7; background: rgba(31,39,66,.72); border-color: rgba(217,212,199,.6);
 }
 
+/* ---------- 漫游天空层：日月经天 + 星空 + 霞光 ---------- */
+#roam-sky { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none; }
+#roam .cel { position: absolute; opacity: 0; transition: left 1.1s ease, top 1.1s ease, opacity .7s; }
+#roam .roam-sun {
+  width: 34px; height: 34px; left: 6%; top: 56%;
+  border: 3px solid var(--ink); border-radius: 50%;
+}
+#roam .roam-sun::after {
+  content: ''; position: absolute; top: -11px; right: -11px; bottom: -11px; left: -11px;
+  border: 2.5px dashed var(--ink); border-radius: 50%;
+  animation: sunSpin 30s linear infinite;
+}
+#roam.slot-0 .roam-sun { opacity: .9; left: 10%; top: 52%; }
+#roam.slot-1 .roam-sun { opacity: .9; left: 30%; top: 16%; }
+#roam.slot-2 .roam-sun { opacity: .9; left: 48%; top: 7%;  }
+#roam.slot-3 .roam-sun { opacity: .9; left: 66%; top: 18%; }
+#roam.slot-4 .roam-sun {
+  opacity: .95; left: 84%; top: 50%;
+  background: rgba(240, 196, 92, .3); box-shadow: 0 0 22px rgba(240, 196, 92, .5);
+}
+#roam .roam-moon {
+  width: 30px; height: 30px; left: 72%; top: 34%;
+  border-radius: 50%; background: #e8e2d2;
+}
+#roam .roam-moon::after {
+  content: ''; position: absolute; left: 12px; top: -5px;
+  width: 26px; height: 26px; border-radius: 50%; background: #1f2742;
+}
+#roam.slot-5 .roam-moon { opacity: 1; top: 12%; }
+#roam.slot-0 .roam-moon { opacity: .3; left: 78%; top: 18%; }
+#roam.slot-0 .roam-moon::after { background: #f6efdd; }
+/* 星空：JS 播种，夜里闪烁 */
+#roam .roam-stars i {
+  position: absolute; width: 3.5px; height: 3.5px;
+  border-radius: 50%; background: #e8e2d2; opacity: 0;
+}
+#roam.slot-5 .roam-stars i { animation: twinkle 2.6s ease-in-out infinite alternate; }
+#roam.slot-5 .roam-stars i:nth-child(2n) { animation-delay: .7s; }
+#roam.slot-5 .roam-stars i:nth-child(3n) { animation-delay: 1.4s; }
+/* 清晨与傍晚的地平线霞光 */
+#roam-sky::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34%;
+  opacity: 0; transition: opacity 1s; pointer-events: none;
+}
+#roam.slot-0 #roam-sky::after {
+  opacity: 1;
+  background: linear-gradient(to top, rgba(240, 196, 92, .18), transparent);
+}
+#roam.slot-4 #roam-sky::after {
+  opacity: 1;
+  background: linear-gradient(to top, rgba(232, 130, 90, .28), rgba(240, 196, 92, .12) 55%, transparent);
+}
+
 #roam-back {
   position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   z-index: 4; font-size: 13px; letter-spacing: 2px; padding: 8px 16px;

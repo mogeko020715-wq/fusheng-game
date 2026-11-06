@@ -654,6 +654,18 @@ function roamBind() {
     }
     mapB.addEventListener('click', () => { if (typeof openMap === 'function') openMap(); });
   }
+  // 星空播种：固定伪随机，夜里闪烁（样式由 .slot-5 控制）
+  const starBox = document.getElementById('roam-stars');
+  if (starBox && !starBox.children.length) {
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 16; i++) {
+      const st = document.createElement('i');
+      starBox.appendChild(st);
+      st.style.left = (rnd() * 94 + 3) + '%';
+      st.style.top = (rnd() * 42 + 3) + '%';
+    }
+  }
   const enterBtn = document.getElementById('btn-roam');
   if (enterBtn) enterBtn.addEventListener('click', enterRoam);
 }
